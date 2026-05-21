@@ -914,6 +914,23 @@ function processFile(file) {
   reader.readAsBinaryString(file);
 }
 
+// How close two dispatch times (in hours) must be to share a vehicle
+const DISPATCH_WINDOW_H = 0.5; // 30 minutes
+
+function etaToHours(etaStr) {
+  if(!etaStr || etaStr==='As per customer' || etaStr==='none' || etaStr==='') return null;
+  const parts = (etaStr+'').split(':').map(Number);
+  return parts[0] + (parts[1]||0)/60;
+}
+
+function dispatchHours(etaStr, estKm) {
+  const etaH = etaToHours(etaStr);
+  if(etaH===null) return MIN_DISPATCH_H;
+  const travelH = estKm / AVG_SPEED_KMH;
+  const d = etaH - travelH;
+  return d < MIN_DISPATCH_H ? MIN_DISPATCH_H : d;
+}
+
 function buildRoutes(rows) {
   const removed=[], matched=[];
   rows.forEach(row=>{
@@ -922,7 +939,9 @@ function buildRoutes(rows) {
     if(!deliveredTo) return;
     const master=matchToMaster(String(deliveredTo));
     if(!master){ removed.push(String(deliveredTo)); return; }
-    matched.push({ deliveredTo:String(deliveredTo), weight, lat:master.lat, lng:master.lng, zone:master.zone, eta:master.eta, vehicle:master.vehicle });
+    const estKm = haversine(WAREHOUSE.lat, WAREHOUSE.lng, master.lat, master.lng);
+    const dispH = dispatchHours(master.eta, estKm);
+    matched.push({ deliveredTo:String(deliveredTo), weight, lat:master.lat, lng:master.lng, zone:master.zone, eta:master.eta, vehicle:master.vehicle, dispH });
   });
 
   const notice=document.getElementById('removedNotice');
@@ -931,23 +950,51 @@ function buildRoutes(rows) {
     document.getElementById('removedList').innerHTML=removed.map(r=>`<div style="margin-top:4px">• ${r}</div>`).join('');
   } else notice.style.display='none';
 
-  const groups={};
-  matched.forEach(s=>{ const key=`${s.zone}||${s.eta||'none'}`; if(!groups[key]) groups[key]=[]; groups[key].push(s); });
+  // Group by zone first
+  const byZone={};
+  matched.forEach(s=>{ if(!byZone[s.zone]) byZone[s.zone]=[]; byZone[s.zone].push(s); });
 
+  // Within each zone, merge stops whose dispatch times fall within DISPATCH_WINDOW_H of the window start
   let routeNum=1; allRoutes=[];
-  Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([key,stops])=>{
-    const [zone,eta]=key.split('||');
-    const sequenced=nearestNeighbour(stops), km=routeKm(sequenced);
-    const totalWeight=sequenced.reduce((s,x)=>s+x.weight,0);
-    const vehicle=vehicleForWeight(totalWeight);
-    const dispatch=dispatchTime(eta==='none'?'':eta,km);
-    allRoutes.push({
-      routeNum, zone, eta:eta==='none'?'—':eta,
-      stops:sequenced.map((s,i)=>({...s,seq:i+1})),
-      km:Math.round(km*10)/10, totalWeight:Math.round(totalWeight*10)/10,
-      vehicle, dispatch, travelTime:travelTimeStr(km),
+  Object.entries(byZone).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([zone, stops])=>{
+    stops.sort((a,b)=>a.dispH - b.dispH);
+
+    const windows=[];
+    stops.forEach(s=>{
+      let placed=false;
+      for(const w of windows) {
+        if(s.dispH - w.dispHStart <= DISPATCH_WINDOW_H) {
+          w.stops.push(s);
+          // Keep track of tightest (earliest) ETA so we never miss a deadline
+          const sEtaH = etaToHours(s.eta);
+          if(sEtaH!==null && (w.bindingEtaH===null || sEtaH < w.bindingEtaH)) {
+            w.bindingEta = s.eta;
+            w.bindingEtaH = sEtaH;
+          }
+          placed=true;
+          break;
+        }
+      }
+      if(!placed) {
+        windows.push({ stops:[s], dispHStart:s.dispH, bindingEta:s.eta||'', bindingEtaH:etaToHours(s.eta) });
+      }
     });
-    routeNum++;
+
+    windows.forEach(w=>{
+      const sequenced=nearestNeighbour(w.stops), km=routeKm(sequenced);
+      const totalWeight=sequenced.reduce((s,x)=>s+x.weight,0);
+      const vehicle=vehicleForWeight(totalWeight);
+      const dispatch=dispatchTime(w.bindingEta, km);
+      const etaSet=[...new Set(w.stops.map(s=>s.eta).filter(Boolean))].sort();
+      const etaDisplay = etaSet.length===1 ? (etaSet[0]||'—') : etaSet.join(', ');
+      allRoutes.push({
+        routeNum, zone, eta:etaDisplay,
+        stops:sequenced.map((s,i)=>({...s,seq:i+1})),
+        km:Math.round(km*10)/10, totalWeight:Math.round(totalWeight*10)/10,
+        vehicle, dispatch, travelTime:travelTimeStr(km),
+      });
+      routeNum++;
+    });
   });
 
   renderUI();
