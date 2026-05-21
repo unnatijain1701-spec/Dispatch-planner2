@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatch Routing Tool</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #F5F4F1;
+    --surface: #FFFFFF;
+    --surface2: #F8F7F4;
+    --border: #E4E2DC;
+    --border-strong: #C8C5BB;
+    --accent: #1A6B3C;
+    --accent-light: #E8F5EE;
+    --accent2: #1A4F8A;
+    --accent2-light: #E8EFF8;
+    --warn: #A85C00;
+    --warn-light: #FFF3E0;
+    --danger: #B03030;
+    --danger-light: #FDECEA;
+    --purple: #5B3FA6;
+    --purple-light: #EEE8FF;
+    --text: #1C1B18;
+    --text-secondary: #5A5750;
+    --text-muted: #9A9590;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: var(--shadow-sm);
+  }
+  .logo-mark {
+    width: 30px; height: 30px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-mark svg { width: 16px; height: 16px; fill: white; }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+  .header-sep { flex: 1; }
+  .date-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .back-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .back-btn:hover { background: var(--surface2); color: var(--text); }
+  .back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* ── CONTAINER ──────────────────────────────────────────── */
+  .container { max-width: 1560px; margin: 0 auto; padding: 24px 28px; }
+
+  /* ── UPLOAD ─────────────────────────────────────────────── */
+  .upload-zone {
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius);
+    padding: 56px 48px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .upload-zone:hover, .upload-zone.drag {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .upload-icon {
+    width: 52px; height: 52px;
+    background: var(--accent-light);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .upload-icon svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 1.8; }
+  .upload-zone h2 { font-size: 17px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .upload-zone p { color: var(--text-muted); font-size: 13px; }
+  .upload-zone .hint {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(26,107,60,0.2);
+  }
+  .upload-zone input { display: none; }
+
+  /* ── REMOVED NOTICE ─────────────────────────────────────── */
+  .removed-notice {
+    background: var(--warn-light);
+    border: 1px solid rgba(168,92,0,0.2);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--warn);
+    display: none;
+  }
+  .removed-notice strong { display: block; margin-bottom: 6px; font-weight: 600; }
+
+  /* ── STATS BAR ──────────────────────────────────────────── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .stat-icon {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .stat-icon svg { width: 18px; height: 18px; stroke-width: 1.8; fill: none; }
+  .si-green { background: var(--accent-light); }
+  .si-green svg { stroke: var(--accent); }
+  .si-blue { background: var(--accent2-light); }
+  .si-blue svg { stroke: var(--accent2); }
+  .si-orange { background: var(--warn-light); }
+  .si-orange svg { stroke: var(--warn); }
+  .si-purple { background: var(--purple-light); }
+  .si-purple svg { stroke: var(--purple); }
+  .stat-info .label { font-size: 11px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
+  .stat-info .value { font-size: 24px; font-weight: 600; font-family: var(--mono); color: var(--text); line-height: 1; }
+  .stat-info .sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+  /* ── MAIN VIEW LAYOUT ───────────────────────────────────── */
+  /* Card grid view (default) */
+  #cardView {
+    display: none;
+  }
+  .view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .view-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .view-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .route-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 14px;
+  }
+
+  /* ── ROUTE SUMMARY CARD ─────────────────────────────────── */
+  .route-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.18s;
+    box-shadow: var(--shadow-sm);
+  }
+  .route-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .rc-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .rc-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--accent);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    min-width: 34px;
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
+  .rc-zone { font-size: 13px; font-weight: 600; flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc-eta { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+  .v-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .v-2w { background: var(--purple-light); color: var(--purple); }
+  .v-tata { background: var(--accent-light); color: var(--accent); }
+  .v-bolero { background: var(--warn-light); color: var(--warn); }
+  .v-eicher { background: var(--danger-light); color: var(--danger); }
+  .v-multi { background: var(--surface2); color: var(--text-secondary); }
+
+  .rc-body { padding: 14px 16px; }
+  .rc-metrics {
+    display: flex;
+    gap: 0;
+    margin-bottom: 14px;
+  }
+  .rc-metric {
+    flex: 1;
+    text-align: center;
+    padding: 10px 6px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    position: relative;
+  }
+  .rc-metric + .rc-metric { margin-left: 6px; }
+  .rc-metric .m-val { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text); line-height: 1; }
+  .rc-metric .m-lbl { font-size: 10px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
+
+  .rc-dispatch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--accent-light);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+  .rc-dispatch .d-icon { font-size: 13px; }
+  .rc-dispatch .d-text { font-size: 12px; color: var(--text-secondary); }
+  .rc-dispatch .d-time { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); margin-left: auto; }
+  .rc-dispatch .d-travel { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+
+  .rc-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .preview-stop {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 3px 0;
+  }
+  .preview-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .preview-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preview-more {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 4px 0 0;
+    font-style: italic;
+  }
+  .rc-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+  }
+  .rc-footer-txt { font-size: 11px; color: var(--text-muted); }
+  .view-route-btn {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .view-route-btn svg { width: 12px; height: 12px; stroke: var(--accent); fill: none; stroke-width: 2; }
+
+  /* ── DETAIL VIEW ────────────────────────────────────────── */
+  #detailView { display: none; }
+  .detail-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) { .detail-layout { grid-template-columns: 1fr; } }
+
+  /* Detail sidebar */
+  .detail-sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 74px;
+  }
+  .detail-sidebar-header {
+    padding: 16px 18px;
+    background: var(--accent);
+    color: white;
+  }
+  .ds-route-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    opacity: 0.75;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .ds-zone { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  .ds-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ds-chip {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.18);
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  .detail-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .dm-item {
+    padding: 14px 16px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .dm-item:last-child { border-right: none; }
+  .dm-val { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--text); }
+  .dm-lbl { font-size: 10px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
+
+  .dispatch-row {
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--accent-light);
+  }
+  .dispatch-row .dr-label { font-size: 12px; color: var(--text-secondary); }
+  .dispatch-row .dr-time { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--accent); margin-left: auto; }
+  .dispatch-row .dr-travel { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+
+  .stops-header {
+    padding: 12px 18px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .stops-list {
+    overflow-y: auto;
+    max-height: 360px;
+  }
+  .stop-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .stop-item:last-child { border-bottom: none; }
+  .stop-item:hover { background: var(--surface2); }
+  .stop-seq {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .stop-name { flex: 1; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stop-weight { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+  .stop-connector {
+    position: relative;
+    padding-left: 18px;
+  }
+
+  /* Map panel */
+  .map-panel { display: flex; flex-direction: column; gap: 14px; }
+  .map-wrap {
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  #map {
+    height: 580px;
+    background: var(--surface2);
+  }
+  .map-legend {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .legend-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .legend-items { display: flex; flex-wrap: wrap; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 20px; height: 2px; flex-shrink: 0; }
+
+  /* Table section */
+  .table-section { margin-top: 20px; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .export-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.3px;
+  }
+  .export-btn:hover { background: #155c32; box-shadow: var(--shadow-sm); }
+  .export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .export-btn svg { width: 14px; height: 14px; stroke: white; fill: none; stroke-width: 2; }
+
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead { background: var(--surface2); }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-weight: 500;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .td-mono { font-family: var(--mono); }
+  .td-accent { color: var(--accent); font-weight: 500; }
+  .td-blue { color: var(--accent2); }
+
+  /* Popup styling */
+  .leaflet-popup-content-wrapper {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 0;
+  }
+  .leaflet-popup-content { margin: 0; }
+  .leaflet-popup-tip { background: var(--surface); }
+  .popup-inner {
+    padding: 12px 14px;
+    font-family: var(--sans);
+    min-width: 160px;
+  }
+  .popup-route { font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 4px; }
+  .popup-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .popup-meta { font-size: 11px; color: var(--text-secondary); display: flex; gap: 10px; }
+
+  /* Scrollbar */
+  .stops-list::-webkit-scrollbar { width: 4px; }
+  .stops-list::-webkit-scrollbar-track { background: transparent; }
+  .stops-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 80px 24px; color: var(--text-muted); display: none; }
+  .empty-icon {
+    width: 72px; height: 72px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+  }
+  .empty-icon svg { width: 32px; height: 32px; stroke: var(--text-muted); fill: none; stroke-width: 1.5; }
+  .empty h3 { font-size: 16px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+  .empty p { font-size: 13px; line-height: 1.7; max-width: 400px; margin: 0 auto; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .route-card { animation: fadeIn 0.25s ease both; }
+  .route-card:nth-child(1) { animation-delay: 0.02s; }
+  .route-card:nth-child(2) { animation-delay: 0.04s; }
+  .route-card:nth-child(3) { animation-delay: 0.06s; }
+  .route-card:nth-child(4) { animation-delay: 0.08s; }
+  .route-card:nth-child(5) { animation-delay: 0.10s; }
+  .route-card:nth-child(6) { animation-delay: 0.12s; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+  </div>
+  <h1>Dispatch Routing Tool</h1>
+  <div class="header-sep"></div>
+  <button class="back-btn" id="backBtn" onclick="showCardView()">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    All Routes
+  </button>
+  <div class="date-chip" id="dateLabel">Loading…</div>
+</header>
+
+<div class="container">
+
+  <!-- Upload -->
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+    <div class="upload-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <h2>Upload Today's Order Sheet</h2>
+    <p>Drop your Excel file here or click to browse</p>
+    <span class="hint">Columns: Customer Name / Delivered To &nbsp;+&nbsp; Weight (kg)</span>
+  </div>
+
+  <!-- Removed notice -->
+  <div class="removed-notice" id="removedNotice">
+    <strong>⚠ Customers removed — no coordinates in master database:</strong>
+    <div id="removedList"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-card">
+      <div class="stat-icon si-green">
+        <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="2"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">Total Orders</div>
+        <div class="value" id="statOrders">0</div>
+        <div class="sub">customers today</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-blue">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">Routes</div>
+        <div class="value" id="statRoutes">0</div>
+        <div class="sub">delivery routes</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-orange">
+        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">Total Weight</div>
+        <div class="value" id="statWeight">0</div>
+        <div class="sub">kg dispatching</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-purple">
+        <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="label">Vehicles</div>
+        <div class="value" id="statVehicles">0</div>
+        <div class="sub">deployed today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">
+      <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+    </div>
+    <h3>Upload an order sheet to begin</h3>
+    <p>The tool will automatically match customers, group routes by zone & ETA, sequence stops, and calculate dispatch times.</p>
+  </div>
+
+  <!-- Card Grid View -->
+  <div id="cardView">
+    <div class="view-header">
+      <span class="view-title">Routes Overview</span>
+      <span class="view-count" id="routeCount">0 routes</span>
+    </div>
+    <div class="route-grid" id="routeGrid"></div>
+
+    <!-- Full table below cards -->
+    <div class="table-section">
+      <div class="section-header">
+        <span class="section-title">All Stops — Full Dispatch Table</span>
+        <button class="export-btn" onclick="exportExcel()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Excel
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Route #</th><th>Drop Seq</th><th>Delivered To</th>
+              <th>Weight (kg)</th><th>Vehicle</th><th>Travel Time</th><th>Dispatch Time</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail View (single route) -->
+  <div id="detailView">
+    <div class="detail-layout">
+      <div class="detail-sidebar" id="detailSidebar">
+        <!-- filled by JS -->
+      </div>
+      <div class="map-panel">
+        <div class="map-wrap">
+          <div id="map"></div>
+        </div>
+        <div class="map-legend" id="mapLegend">
+          <div class="legend-title">Map Legend</div>
+          <div class="legend-items">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#1A6B3C;border:2px solid white;box-shadow:0 0 0 1px #1A6B3C"></div>
+              <span>Warehouse</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-line" id="legendLine" style="background:#1A6B3C"></div>
+              <span>Route Path</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" id="legendDot" style="background:#1A6B3C"></div>
+              <span>Drop Locations (numbered in sequence)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ─── MASTER DATABASE ────────────────────────────────────────────────────────
+const MASTER_DB = [{"name":"Amicus Natural Products Private Limited (Gole Market)","lat":28.6330632,"lng":77.2046653,"zone":"CENTRAL DELHI","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited (Vikas Puri)","lat":28.6440107,"lng":77.0673254,"zone":"WEST DELHI","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited GTB Nagar","lat":28.6974789,"lng":77.2050668,"zone":"HARYANA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Jangpura","lat":28.5819064,"lng":77.2459296,"zone":"SOUTH DELHI","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Jasola","lat":28.5375083,"lng":77.2851494,"zone":"SOUTH DELHI","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Laxmi Nagar","lat":28.6277582,"lng":77.2765361,"zone":"EAST DELHI","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Malviya nagar","lat":28.5377493,"lng":77.2099058,"zone":"SOUTH DELHI","eta":"12:00","vehicle":"Tata Ace"},{"name":"Amicus Natural Products Private Limited Rajouri Garden","lat":28.6538362,"lng":77.1322083,"zone":"WEST DELHI","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Vasant kunj","lat":28.5273383,"lng":77.1334422,"zone":"HARYANA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited (Sector 65)","lat":28.3981633,"lng":77.061651,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"Amicus Natural Products Private Limited (SECTOR-82)","lat":28.3900561,"lng":76.9566833,"zone":"GURGAON","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Golf Course Road","lat":28.4354766,"lng":77.0865034,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"Amicus Natural Products Private Limited Sector 106 Gurgaon","lat":28.5036643,"lng":76.9902625,"zone":"GURGAON","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Sector 16 Faridabad","lat":28.411466,"lng":77.3112722,"zone":"FARIDABAD","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Sector 48 Sohna Road","lat":28.4274986,"lng":77.0336806,"zone":"GURGAON","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Sushant Lok","lat":28.4606096,"lng":77.0600405,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"Amicus Natural Products Private Limited Udyog Vihar","lat":28.5092129,"lng":77.0809646,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"Amicus Natural Products Private Greater Noida","lat":28.4812583,"lng":77.4817627,"zone":"GREATER NOIDA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited (Noida Sec-73)","lat":28.579715,"lng":77.3827904,"zone":"NOIDA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Indirapuram","lat":28.644779,"lng":77.349469,"zone":"NOIDA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Noida Gaur City 2","lat":28.6055623,"lng":77.4248777,"zone":"NOIDA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Noida Sec-141","lat":28.5060152,"lng":77.4129281,"zone":"NOIDA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Noida Sector 46","lat":28.5491449,"lng":77.3604615,"zone":"NOIDA","eta":"12:00","vehicle":"2W"},{"name":"Amicus Natural Products Private Limited Noida Sector 6","lat":28.59522,"lng":77.3171707,"zone":"NOIDA","eta":"12:00","vehicle":"2W"},{"name":"BABOUNE FOODS PRIVATE LIMITED","lat":28.429647,"lng":77.5517516,"zone":"GREATER NOIDA","eta":"10:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Epica/Moti Nagar)","lat":28.6580211,"lng":77.1424603,"zone":"WEST DELHI","eta":"20:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Janak Cinema)","lat":28.611217,"lng":77.0911213,"zone":"WEST DELHI","eta":"20:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Kalka Ji)","lat":28.5423462,"lng":77.2508492,"zone":"SOUTH DELHI","eta":"20:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Kamal Nagar)","lat":28.6799802,"lng":77.2057303,"zone":"CENTRAL DELHI","eta":"20:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Mayur Vihar )","lat":28.6082973,"lng":77.2927525,"zone":"EAST DELHI","eta":"20:00","vehicle":"2W"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Papcific Mall Jasola)","lat":28.5371335,"lng":77.2804619,"zone":"SOUTH DELHI","eta":"20:00","vehicle":"2W"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Tagore Garden)","lat":28.6422449,"lng":77.1032077,"zone":"WEST DELHI","eta":"20:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (Unity One)","lat":28.7150017,"lng":77.1135215,"zone":"WEST DELHI","eta":"20:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (VK)","lat":28.5416602,"lng":77.1526125,"zone":"SOUTH DELHI","eta":"20:00","vehicle":"Tata Ace"},{"name":"Compass India Food Services Private Limited (AMERICAN EXPRESS)","lat":28.4020767,"lng":77.0001488,"zone":"GURGAON","eta":"14:00","vehicle":"Tata Ace"},{"name":"Compass India Food Services Private Limited (CPU GGN)","lat":28.4309864,"lng":76.9881859,"zone":"GURGAON","eta":"14:00","vehicle":"Tata Ace"},{"name":"COMPASS INDIA FOOD SERVICES PRIVATE LIMITED (CPU3)","lat":28.4309864,"lng":76.9881859,"zone":"GURGAON","eta":"14:00","vehicle":"Tata Ace"},{"name":"Compass India Food Services Private Limited (GOOGLE-SIGB)","lat":28.4605961,"lng":77.04562,"zone":"GURGAON","eta":"14:00","vehicle":"Tata Ace"},{"name":"Compass India Food Services Pvt Ltd (Google Connect-Tril )","lat":28.4021778,"lng":77.0357018,"zone":"GURGAON","eta":"14:00","vehicle":"Tata Ace"},{"name":"Compass India Food Services Pvt Ltd (GOOGLE INDIA-SIGD)","lat":28.4626522,"lng":77.0456581,"zone":"GURGAON","eta":"14:00","vehicle":"Tata Ace"},{"name":"GOC SERVICES INDIA PVT LTD - TIP-2","lat":28.4111137,"lng":77.1148873,"zone":"HARYANA","eta":"14:00","vehicle":"Tata Ace"},{"name":"GOOGLE CONNECT SERVICES INDIA PVT (GOVO)","lat":28.4111137,"lng":77.1148873,"zone":"HARYANA","eta":"14:00","vehicle":"Tata Ace"},{"name":"CRAVICIOUS FOODS PRIVATE LIMITED (Noida)","lat":28.4297662,"lng":77.5416973,"zone":"GREATER NOIDA","eta":"09:00","vehicle":"Tata Ace"},{"name":"DANA CHOGA (SEC-14)","lat":28.4822964,"lng":77.0469473,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"DANA CHOGA (SEC-22)","lat":28.479786,"lng":77.0428029,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"DANA CHOGA (SEC-54)","lat":28.4799214,"lng":76.9649061,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"DANA CHOGA FOODS AND HOSPITALITY PRIVATE (Nirvana)","lat":28.4139085,"lng":77.0634729,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"DANA CHOGA FOODS AND HOSPITALITY PRIVATE (SEC-26)","lat":28.472074,"lng":77.0299822,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"DANA CHOGA FOODS AND HOSPITALITY PRIVATE (SEC-45)","lat":28.4139038,"lng":76.99395,"zone":"GURGAON","eta":"12:00","vehicle":"2W"},{"name":"DANA CHOGA FOODS AND HOSPITALITY PRIVATE (SEC-47)","lat":28.4139038,"lng":76.99395,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"DANA CHOGA FOODS AND HOSPITALITY PRIVATE (Sec-83)","lat":28.3927181,"lng":76.8950844,"zone":"HARYANA","eta":"12:00","vehicle":"Tata Ace"},{"name":"Dana Choga Foods And Hospitality PVT LTD (DLF DOWN TOWN)","lat":28.5033853,"lng":77.0225452,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"Dana Choga Foods And Hospitality PVT LTD (DRK EXP Sec-102)","lat":28.4788028,"lng":76.9204464,"zone":"HARYANA","eta":"12:00","vehicle":"Tata Ace"},{"name":"Dana Choga Foods And Hospitality PVT LTD (Sector-69)","lat":28.3997196,"lng":76.9664704,"zone":"GURGAON","eta":"12:00","vehicle":"2W"},{"name":"Devyani International Limited (075)","lat":28.5673949,"lng":77.2441367,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (088)","lat":28.6416609,"lng":77.1024726,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (127)","lat":28.6406839,"lng":77.0724319,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (17)","lat":28.7126358,"lng":77.1249109,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (243)","lat":28.5501564,"lng":77.240549,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (248)","lat":28.6198556,"lng":76.9988705,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (250)","lat":28.6360067,"lng":77.0777769,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (72)","lat":28.5375172,"lng":77.2842286,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (897)","lat":28.658381,"lng":77.0004184,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P321)","lat":28.5506382,"lng":77.1194906,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P327)","lat":28.6132315,"lng":77.0377125,"zone":"WEST DELHI","eta":"23:59","vehicle":"Tata Ace"},{"name":"Devyani International Limited (P341)","lat":28.5247138,"lng":77.1539431,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"Tata Ace"},{"name":"Devyani International Limited (P343)","lat":28.7160858,"lng":77.111706,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P345)","lat":28.6000576,"lng":77.0634459,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P348)","lat":28.5370958,"lng":77.2548546,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P354)","lat":28.6082792,"lng":76.9698377,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P388)","lat":28.6896704,"lng":77.1323937,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P401)","lat":28.6012146,"lng":77.0105079,"zone":"WEST DELHI","eta":"23:59","vehicle":"Tata Ace"},{"name":"Devyani International Limited (P426)","lat":28.6994833,"lng":77.2054419,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P486)","lat":28.5694587,"lng":77.2656061,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P488)","lat":28.592341,"lng":76.8971819,"zone":"HARYANA","eta":"23:59","vehicle":"Tata Ace"},{"name":"Devyani International Limited (P537)","lat":28.6539726,"lng":77.2587749,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P568)","lat":28.5880549,"lng":77.16584,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P569)","lat":28.5839036,"lng":77.0690149,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P606)","lat":28.6221355,"lng":76.9862533,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P623)","lat":28.6574382,"lng":77.2840453,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P630)","lat":28.7186735,"lng":77.0286385,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P666)","lat":28.6894831,"lng":77.2671513,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P672)","lat":28.6081465,"lng":77.2900088,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P681)","lat":28.7345125,"lng":77.0954734,"zone":"HARYANA","eta":"23:59","vehicle":"Tata Ace"},{"name":"Devyani International Limited (P705)","lat":28.6793671,"lng":77.1929436,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P723)","lat":28.8538915,"lng":77.0844601,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P744)","lat":28.5074045,"lng":77.2219457,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P748)","lat":28.5541417,"lng":77.0626493,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P775)","lat":28.6674867,"lng":77.0827502,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P782)","lat":28.6275385,"lng":77.2096182,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"Tata Ace"},{"name":"Devyani International Limited (P800)","lat":28.5763568,"lng":77.1846609,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P802)","lat":28.6193963,"lng":77.0690267,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P840)","lat":28.5557284,"lng":77.0884011,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P845)","lat":28.5558729,"lng":77.0164482,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P864)","lat":28.568423,"lng":76.8631398,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P867)","lat":28.6330629,"lng":77.1281408,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P921)","lat":28.7011567,"lng":77.1066082,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P938)","lat":28.5578053,"lng":77.0523055,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Ltd (K094)","lat":28.5579409,"lng":76.9753305,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED ( 372)","lat":28.4790203,"lng":77.0702722,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED ( Y049)","lat":28.521859,"lng":77.0127437,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (119)","lat":28.4733535,"lng":76.9989306,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"DEVYANI INTERNATIONAL LIMITED (203)","lat":28.4375528,"lng":77.0304649,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (232)","lat":28.4398904,"lng":76.9964412,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (25)","lat":28.4757787,"lng":77.0344274,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (26)","lat":28.5038946,"lng":77.0866786,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"DEVYANI INTERNATIONAL LIMITED (301)","lat":28.5038127,"lng":77.086731,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (330)","lat":28.4249075,"lng":77.028996,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (349)","lat":28.4392595,"lng":77.0303617,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (374)","lat":28.3234956,"lng":76.8910939,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (58)","lat":28.4434363,"lng":77.045703,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"DEVYANI INTERNATIONAL LIMITED (K120)","lat":28.4437155,"lng":77.0464847,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K163)","lat":28.3908959,"lng":77.0567997,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K179)","lat":28.4039049,"lng":76.937464,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K199)","lat":28.4242722,"lng":77.084561,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K283)","lat":28.5029875,"lng":77.0796118,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K287)","lat":28.4624571,"lng":77.0775178,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K479)","lat":28.4017489,"lng":77.0087267,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K487)","lat":28.4393693,"lng":76.9957191,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K512)","lat":28.5030594,"lng":76.9967414,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K536)","lat":28.4244846,"lng":76.9202855,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K549)","lat":28.459323,"lng":77.0377806,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K579)","lat":28.4247203,"lng":77.0580288,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K585)","lat":28.4670343,"lng":76.9590467,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K633)","lat":28.3774102,"lng":76.9487424,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K689)","lat":28.4342078,"lng":77.0489236,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K704)","lat":28.4936786,"lng":77.0785144,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K708)","lat":28.4457886,"lng":77.0707471,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K753)","lat":28.4460101,"lng":76.9165523,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (K951)","lat":28.4464162,"lng":76.9165509,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (KFC Paras Floret- Y009 )","lat":28.4468223,"lng":76.9165494,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P328)","lat":28.4257615,"lng":77.0471166,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P339)","lat":28.4624704,"lng":77.0525184,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"DEVYANI INTERNATIONAL LIMITED (P381)","lat":28.3907515,"lng":77.0570089,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P400)","lat":28.4039039,"lng":76.9374727,"zone":"HARYANA","eta":"23:59","vehicle":"Tata Ace"},{"name":"DEVYANI INTERNATIONAL LIMITED (P478)","lat":28.4039917,"lng":76.9066368,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P679)","lat":28.401361,"lng":77.0097248,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"DEVYANI INTERNATIONAL LIMITED (P710)","lat":28.4242044,"lng":76.8609092,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Devyani International Limited (P745)","lat":28.4668503,"lng":76.9591279,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P764)","lat":28.4249611,"lng":77.0286884,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P772)","lat":28.4259953,"lng":76.8744907,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P812)","lat":28.3765803,"lng":76.9494189,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P829)","lat":28.4801238,"lng":77.0702264,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P876)","lat":28.4531201,"lng":77.0406731,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (P893)","lat":28.4533468,"lng":76.7219619,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED (Y038)","lat":28.393137,"lng":76.9658236,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED(K833)","lat":28.4064737,"lng":77.0344112,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED(Z011)","lat":28.4131565,"lng":77.1033597,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"DEVYANI INTERNATIONAL LIMITED(Z102)","lat":28.5227688,"lng":77.0134338,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED - Karnal Haveli Haryana","lat":29.7563861,"lng":76.9662003,"zone":"HARYANA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED - Sector7 Karnal","lat":29.6868139,"lng":76.9925025,"zone":"HARYANA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED (DME 33 Nuh -75557)","lat":28.0342246,"lng":77.1175204,"zone":"HARYANA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Milestone 109)","lat":29.5689136,"lng":76.9575623,"zone":"HARYANA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Subway Riyasat Resort)","lat":29.9023317,"lng":76.9108668,"zone":"HARYANA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Advent)","lat":28.5010521,"lng":77.4071308,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Alpha 1 Noida)","lat":28.4729973,"lng":77.5120928,"zone":"GREATER NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Blue Sapphire)","lat":28.6073795,"lng":77.4337689,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Botanical Garden)","lat":28.5640684,"lng":77.3317051,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Cleo County Noida)","lat":28.5969889,"lng":77.3900526,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (CRC Sublimis Noida)","lat":28.5755589,"lng":77.4306096,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Garh Road)","lat":28.967412,"lng":77.7120732,"zone":"UP WEST","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Golden I Noida)","lat":28.5915625,"lng":77.433003,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Grand Venice Mall)","lat":28.465273,"lng":77.4924738,"zone":"GREATER NOIDA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Gulshan Mall)","lat":28.5080789,"lng":77.3842946,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Logix Cyber Park)","lat":28.6124104,"lng":77.2213553,"zone":"CENTRAL DELHI","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED (North india Mall)","lat":28.6371191,"lng":77.3643643,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Rcube Monad Noida)","lat":28.5607345,"lng":77.3541734,"zone":"NOIDA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Sec 110)","lat":28.5450091,"lng":77.3663644,"zone":"NOIDA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Sec 120)","lat":28.5862095,"lng":77.3963359,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Sector 18 Noida)","lat":28.5712739,"lng":77.3223166,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Sector 78 Noida)","lat":28.5640416,"lng":77.3821266,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Sharda Hospital, Greater Noida)","lat":28.4737847,"lng":77.4796348,"zone":"GREATER NOIDA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Sky Mark)","lat":28.5320811,"lng":77.3590977,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED (Supertech 34 Noida)","lat":28.5820047,"lng":77.3623031,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"Eversub India Private Limited Shop (Eros Indirapuram)","lat":28.6404633,"lng":77.357803,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED Vaishali Ghaziabad","lat":28.6424755,"lng":77.3338424,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(AMITY UNIVERSITY )","lat":28.5466971,"lng":77.3319946,"zone":"NOIDA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Bennett University )","lat":28.4488702,"lng":77.5648461,"zone":"GREATER NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(DLF Mall of India)","lat":28.5673962,"lng":77.3184588,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Down Town Meerut)","lat":29.0079036,"lng":77.7440821,"zone":"UP WEST","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Galaxy Business Park)","lat":28.6244756,"lng":77.3678741,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Gaur City)","lat":28.6059422,"lng":77.4269876,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Knowledge Park)","lat":28.4572322,"lng":77.497796,"zone":"GREATER NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(La Gracia Mall)","lat":28.6318861,"lng":77.4320217,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Mahagun Mart Gaur city2)","lat":28.6192855,"lng":77.4085695,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Noida-16)","lat":28.5801124,"lng":77.3126957,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Opulent Mall)","lat":28.654377,"lng":77.4340962,"zone":"NOIDA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Oxygen Business Park)","lat":28.4978686,"lng":77.4155267,"zone":"HARYANA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Pratap Vihar)","lat":28.6438786,"lng":77.4063285,"zone":"NOIDA","eta":"21:00","vehicle":"2W"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Subharti University)","lat":28.9626611,"lng":77.6374686,"zone":"UP WEST","eta":"21:00","vehicle":"Tata Ace"},{"name":"EVERSUB INDIA PRIVATE LIMITED(Vasundhara)","lat":28.6339961,"lng":77.3116193,"zone":"NOIDA","eta":"21:00","vehicle":"Tata Ace"},{"name":"Jubilant Foodworks LTD (Mohali)","lat":30.7275702,"lng":76.7066442,"zone":"PUNJAB","eta":"11:00","vehicle":"Tata Ace"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED ( Ansa City Centre)","lat":28.3753467,"lng":76.2903457,"zone":"HARYANA","eta":"20:00","vehicle":"2W"},{"name":"BURMAN HOSPITALITY PRIVATE LIMITED (ATS Ghaziabad)","lat":28.6558466,"lng":77.4702711,"zone":"NOIDA","eta":"20:00","vehicle":"2W"},{"name":"Muhavra Enterprises Pvt. Ltd.(HR)","lat":28.5064736,"lng":77.0843463,"zone":"GURGAON","eta":"12:00","vehicle":"Tata Ace"},{"name":"OBEROI FLIGHT SERVICES-DL","lat":28.5570221,"lng":77.0794945,"zone":"HARYANA","eta":"11:00","vehicle":"Tata Ace"},{"name":"Om Sweets Pvt Ltd","lat":28.4409613,"lng":76.9622499,"zone":"GURGAON","eta":"10:00","vehicle":"Tata Ace"},{"name":"Organicut Fresh Private Limited Deliverit (Gurugram)-DeiverIT","lat":28.3755221,"lng":76.7850602,"zone":"HARYANA","eta":"","vehicle":"Eicher 14 ft"},{"name":"Organicut Fresh Private Limited Deliverit (Noida)- DeliverIT","lat":28.6016547,"lng":77.3869316,"zone":"NOIDA","eta":"","vehicle":"Eicher 14 ft"},{"name":"PJTJ TECHNOLOGIS PRIVATE LIMTED(Sec-42)","lat":28.9023476,"lng":77.0636788,"zone":"HARYANA","eta":"18:00","vehicle":"Tata Ace"},{"name":"Rebel Foods Private Limited","lat":30.7282765,"lng":76.767163,"zone":"PUNJAB","eta":"19:00","vehicle":"Tata Ace"},{"name":"Rebel Foods Private Limited (NAC Chandigarh)","lat":30.7077473,"lng":76.8194847,"zone":"HIMACHAL","eta":"19:00","vehicle":"Tata Ace"},{"name":"Rebel Foods Private Limited ( Kharar)","lat":30.745118,"lng":76.5090774,"zone":"PUNJAB","eta":"19:00","vehicle":"Tata Ace"},{"name":"Rebel Foods Private Limited (Phase 11 Mohali)","lat":30.6796508,"lng":76.6624635,"zone":"PUNJAB","eta":"19:00","vehicle":"Tata Ace"},{"name":"Rebel Foods Private Limited (Zirakpur)","lat":30.6490351,"lng":76.8197598,"zone":"HIMACHAL","eta":"19:00","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (5301)","lat":28.5414259,"lng":77.1187444,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5302)","lat":28.632675,"lng":77.2137476,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5303)","lat":28.6312083,"lng":77.2166035,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (5304)","lat":28.592133,"lng":77.0370089,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5306)","lat":28.5922068,"lng":76.9983837,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5307)","lat":28.620879,"lng":77.0636856,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5308)","lat":28.62836,"lng":77.0576856,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5309)","lat":28.542172,"lng":77.2509964,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5310)","lat":28.6804737,"lng":77.2055151,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5312)","lat":28.5693297,"lng":77.2401951,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5313)","lat":28.7008321,"lng":77.0983959,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5314)","lat":28.5514532,"lng":77.2490655,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5315)","lat":28.6455397,"lng":77.1663551,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5316)","lat":28.6393532,"lng":77.2862462,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5317)","lat":28.7160347,"lng":77.0234608,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5318)","lat":28.52342,"lng":77.1986778,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5319)","lat":28.642702,"lng":76.8175489,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5321)","lat":28.5331605,"lng":77.1453832,"zone":"HARYANA","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (5322)","lat":28.5294731,"lng":77.2168693,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (5325)","lat":28.6893582,"lng":77.1318803,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5326)","lat":28.6592768,"lng":77.2861468,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5327)","lat":28.6509956,"lng":77.1187633,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5328)","lat":28.5891041,"lng":77.2990282,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5329)","lat":28.690235,"lng":77.0062974,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5333)","lat":28.6008217,"lng":77.0271391,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5334)","lat":28.7160347,"lng":77.0234608,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5335)","lat":28.6032646,"lng":77.0731985,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5337)","lat":28.5525251,"lng":77.0559023,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5338)","lat":28.6894885,"lng":77.0520524,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5339)","lat":28.6565739,"lng":77.1467408,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5340)","lat":28.6681175,"lng":77.051342,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5341)","lat":28.5369295,"lng":77.1938657,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5342)","lat":28.5763717,"lng":77.1925591,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (5343)","lat":28.6225445,"lng":77.0568255,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5345)","lat":28.6679038,"lng":77.2260479,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5346)","lat":28.5627047,"lng":77.2221251,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5348)","lat":28.6061655,"lng":76.9837122,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5349)","lat":28.636656,"lng":77.1433094,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5351)","lat":28.6180267,"lng":77.2769401,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5352)","lat":28.6370693,"lng":77.282071,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5353)","lat":28.5439522,"lng":77.1972016,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5354)","lat":28.6639868,"lng":77.0898903,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5357)","lat":28.7129457,"lng":77.1557361,"zone":"NORTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5358)","lat":28.6759597,"lng":77.3183401,"zone":"NOIDA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5359)","lat":28.6160325,"lng":77.0825611,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5360)","lat":28.7343987,"lng":77.1111141,"zone":"NORTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5361)","lat":28.5373056,"lng":77.2803665,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5362)","lat":28.5616182,"lng":77.2663202,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5363)","lat":28.5576038,"lng":77.1617709,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5365)","lat":28.5202606,"lng":77.2771766,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5366)","lat":28.624036,"lng":76.9511168,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5367)","lat":28.6417748,"lng":77.1202052,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5368)","lat":28.5069037,"lng":77.2295632,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5369)","lat":28.6448498,"lng":77.186095,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5371)","lat":28.5470753,"lng":77.2493145,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5373)","lat":28.6796716,"lng":77.1914384,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5374)","lat":28.6606797,"lng":77.2951731,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5375)","lat":28.5747772,"lng":77.0650312,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5376)","lat":28.5942767,"lng":77.2959271,"zone":"EAST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5380)","lat":28.555664,"lng":77.097029,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5381)","lat":28.5920963,"lng":77.1595575,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5382)","lat":28.5213357,"lng":77.0797561,"zone":"GURGAON","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5383)","lat":28.4812248,"lng":77.1232261,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5384)","lat":28.627043,"lng":77.0620705,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5386)","lat":28.6704826,"lng":77.1303563,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5388)","lat":28.6125448,"lng":77.3080652,"zone":"NOIDA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5390)","lat":28.6580437,"lng":77.1425511,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5391)","lat":28.6951998,"lng":77.1497269,"zone":"WEST DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5395)","lat":28.5768762,"lng":77.0145511,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (DLF Midtown Plaza-5389)","lat":28.6635802,"lng":77.1512498,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Ltd (5332)","lat":28.6456329,"lng":77.2072611,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Ltd (5378)","lat":28.6983662,"lng":77.2032428,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Ltd (5379)","lat":28.6553102,"lng":77.2059232,"zone":"CENTRAL DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Ltd (5393)","lat":28.5023257,"lng":77.2963861,"zone":"SOUTH DELHI","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (2600)","lat":28.4944078,"lng":77.0904352,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (2601)","lat":28.5079483,"lng":77.0430755,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (2603)","lat":28.5116913,"lng":77.0329836,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (2606)","lat":28.4210613,"lng":77.0880937,"zone":"GURGAON","eta":"23:59","vehicle":"Tata Ace"},{"name":"Sapphire Foods India Limited (5904)","lat":28.9327626,"lng":76.9924386,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Limited (5921)","lat":29.341691,"lng":76.9753366,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Ltd (5814)","lat":28.7717618,"lng":77.4480495,"zone":"HARYANA","eta":"23:59","vehicle":"2W"},{"name":"Sapphire Foods India Ltd (5815)","lat":28.1478357,"lng":72.9588669,"zone":"RAJASTHAN","eta":"23:59","vehicle":"2W"},{"name":"Tajsats Air Catering Ltd (Delhi)","lat":28.5487286,"lng":77.1048235,"zone":"HARYANA","eta":"08:00","vehicle":"Tata Ace"},{"name":"THEA KITCHEN PRIVATE LIMITED","lat":28.4338299,"lng":77.0001935,"zone":"GURGAON","eta":"09:00","vehicle":"Tata Ace"},{"name":"VRB CONSUMER PRODUCTS PRIVATE LIMITED","lat":27.815332,"lng":76.2224499,"zone":"RAJASTHAN","eta":"","vehicle":"Tata Ace"}];
+
+const masterMap = new Map();
+MASTER_DB.forEach(r => masterMap.set(normalise(r.name), r));
+
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const WAREHOUSE = { lat: 28.938543, lng: 77.082583 };
+const AVG_SPEED_KMH = 20;
+const MIN_DISPATCH_H = 5;
+const VEHICLE_CAPS = [
+  { name: '2W', max: 25 },
+  { name: 'Tata Ace', max: 500 },
+  { name: 'Bolero Pickup', max: 1200 },
+  { name: 'Eicher 14 ft', max: 2500 },
+  { name: 'Multi Vehicle', max: Infinity },
+];
+
+// Route colors (professional palette)
+const ROUTE_COLORS = ['#1A6B3C','#1A4F8A','#A85C00','#5B3FA6','#B03030','#155e5e','#7B4F2E','#3A6B8A','#6B3A6B','#4A6B1A','#8A3A1A','#1A6B5A'];
+
+let allRoutes = [];
+let map = null;
+let mapLayers = [];
+let activeRouteIdx = null;
+
+// ─── UTILITIES ───────────────────────────────────────────────────────────────
+function normalise(s) { return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'').trim(); }
+
+function haversine(lat1,lng1,lat2,lng2) {
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function vehicleForWeight(kg) { for(const v of VEHICLE_CAPS) if(kg<=v.max) return v.name; return 'Multi Vehicle'; }
+
+function vehicleClass(v) {
+  if(v==='2W') return 'v-2w';
+  if(v==='Tata Ace') return 'v-tata';
+  if(v==='Bolero Pickup') return 'v-bolero';
+  if(v==='Eicher 14 ft') return 'v-eicher';
+  return 'v-multi';
+}
+
+function dispatchTime(etaStr, routeKm) {
+  if(!etaStr||etaStr==='As per customer') return '05:00';
+  const [hh,mm]=etaStr.split(':').map(Number);
+  const etaH=hh+(mm||0)/60, travelH=routeKm/AVG_SPEED_KMH;
+  let dispH=etaH-travelH; if(dispH<MIN_DISPATCH_H) dispH=MIN_DISPATCH_H;
+  const dh=Math.floor(dispH), dm=Math.round((dispH-dh)*60);
+  return `${String(dh).padStart(2,'0')}:${String(dm).padStart(2,'0')}`;
+}
+
+function travelTimeStr(km) {
+  const h=km/AVG_SPEED_KMH, hh=Math.floor(h), mm=Math.round((h-hh)*60);
+  return `${hh}h ${mm}m`;
+}
+
+// ─── MATCHING & ROUTING ───────────────────────────────────────────────────────
+function matchToMaster(deliveredTo) {
+  const key=normalise(deliveredTo);
+  if(masterMap.has(key)) return masterMap.get(key);
+  let best=null, bestScore=0;
+  for(const [k,v] of masterMap) {
+    const shorter=Math.min(key.length,k.length); if(shorter<6) continue;
+    let score=0; for(let i=0;i<shorter;i++) if(key[i]===k[i]) score++;
+    const norm=score/Math.max(key.length,k.length);
+    if(norm>0.85&&norm>bestScore){bestScore=norm;best=v;}
+  }
+  return best;
+}
+
+function nearestNeighbour(stops) {
+  if(stops.length<=1) return stops;
+  const unvisited=[...stops], route=[];
+  let cur={lat:WAREHOUSE.lat,lng:WAREHOUSE.lng};
+  while(unvisited.length) {
+    let minD=Infinity, minI=0;
+    unvisited.forEach((s,i)=>{ const d=haversine(cur.lat,cur.lng,s.lat,s.lng); if(d<minD){minD=d;minI=i;} });
+    cur=unvisited[minI]; route.push(cur); unvisited.splice(minI,1);
+  }
+  return route;
+}
+
+function routeKm(stops) {
+  let total=0, prev=WAREHOUSE;
+  for(const s of stops) { total+=haversine(prev.lat,prev.lng,s.lat,s.lng); prev=s; }
+  return total;
+}
+
+// ─── FILE PROCESSING ─────────────────────────────────────────────────────────
+function processFile(file) {
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    buildRoutes(XLSX.utils.sheet_to_json(ws,{defval:''}));
+  };
+  reader.readAsBinaryString(file);
+}
+
+function buildRoutes(rows) {
+  const removed=[], matched=[];
+  rows.forEach(row=>{
+    const deliveredTo=row['Delivered To']||row['delivered to']||row['Customer Name']||row['customer name']||row['DeliveredTo']||Object.values(row)[0]||'';
+    const weight=parseFloat(row['Weight']||row['weight']||row['Weight (kg)']||Object.values(row)[1]||0)||0;
+    if(!deliveredTo) return;
+    const master=matchToMaster(String(deliveredTo));
+    if(!master){ removed.push(String(deliveredTo)); return; }
+    matched.push({ deliveredTo:String(deliveredTo), weight, lat:master.lat, lng:master.lng, zone:master.zone, eta:master.eta, vehicle:master.vehicle });
+  });
+
+  const notice=document.getElementById('removedNotice');
+  if(removed.length>0) {
+    notice.style.display='block';
+    document.getElementById('removedList').innerHTML=removed.map(r=>`<div style="margin-top:4px">• ${r}</div>`).join('');
+  } else notice.style.display='none';
+
+  const groups={};
+  matched.forEach(s=>{ const key=`${s.zone}||${s.eta||'none'}`; if(!groups[key]) groups[key]=[]; groups[key].push(s); });
+
+  let routeNum=1; allRoutes=[];
+  Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([key,stops])=>{
+    const [zone,eta]=key.split('||');
+    const sequenced=nearestNeighbour(stops), km=routeKm(sequenced);
+    const totalWeight=sequenced.reduce((s,x)=>s+x.weight,0);
+    const vehicle=vehicleForWeight(totalWeight);
+    const dispatch=dispatchTime(eta==='none'?'':eta,km);
+    allRoutes.push({
+      routeNum, zone, eta:eta==='none'?'—':eta,
+      stops:sequenced.map((s,i)=>({...s,seq:i+1})),
+      km:Math.round(km*10)/10, totalWeight:Math.round(totalWeight*10)/10,
+      vehicle, dispatch, travelTime:travelTimeStr(km),
+    });
+    routeNum++;
+  });
+
+  renderUI();
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function renderUI() {
+  const totalOrders=allRoutes.reduce((s,r)=>s+r.stops.length,0);
+  const totalWeight=allRoutes.reduce((s,r)=>s+r.totalWeight,0);
+  document.getElementById('statOrders').textContent=totalOrders;
+  document.getElementById('statRoutes').textContent=allRoutes.length;
+  document.getElementById('statWeight').textContent=Math.round(totalWeight);
+  document.getElementById('statVehicles').textContent=allRoutes.length;
+  document.getElementById('statsBar').style.display='grid';
+  document.getElementById('uploadZone').style.display='none';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('routeCount').textContent=`${allRoutes.length} routes`;
+
+  renderRouteGrid();
+  renderTable();
+  showCardView();
+}
+
+function renderRouteGrid() {
+  const grid=document.getElementById('routeGrid');
+  grid.innerHTML=allRoutes.map((r,idx)=>{
+    const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
+    const previewStops=r.stops.slice(0,3);
+    const more=r.stops.length-3;
+    return `
+    <div class="route-card" onclick="selectRoute(${idx})" style="--rc:${color}">
+      <div class="rc-header">
+        <div class="rc-num" style="background:${color}">R${r.routeNum}</div>
+        <div class="rc-zone" title="${r.zone}">${r.zone}</div>
+        <div class="rc-eta">${r.eta}</div>
+        <div class="v-badge ${vehicleClass(r.vehicle)}">${r.vehicle}</div>
+      </div>
+      <div class="rc-body">
+        <div class="rc-metrics">
+          <div class="rc-metric">
+            <div class="m-val">${r.stops.length}</div>
+            <div class="m-lbl">Stops</div>
+          </div>
+          <div class="rc-metric">
+            <div class="m-val">${r.totalWeight}</div>
+            <div class="m-lbl">kg</div>
+          </div>
+          <div class="rc-metric">
+            <div class="m-val">${r.km}</div>
+            <div class="m-lbl">km</div>
+          </div>
+        </div>
+        <div class="rc-dispatch">
+          <span class="d-icon">🕐</span>
+          <span class="d-text">Dispatch</span>
+          <span class="d-time">${r.dispatch}</span>
+          <span class="d-travel">${r.travelTime}</span>
+        </div>
+        <div class="rc-preview">
+          ${previewStops.map((s,i)=>`
+            <div class="preview-stop">
+              <div class="preview-dot" style="background:${color}">${s.seq}</div>
+              <span class="preview-name" title="${s.deliveredTo}">${s.deliveredTo}</span>
+            </div>`).join('')}
+          ${more>0?`<div class="preview-more">+${more} more stop${more>1?'s':''}</div>`:''}
+        </div>
+      </div>
+      <div class="rc-footer">
+        <span class="rc-footer-txt">Click to view route on map</span>
+        <span class="view-route-btn">
+          View Route
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTable() {
+  const tbody=document.getElementById('tableBody');
+  const rows=[];
+  allRoutes.forEach((r,idx)=>{
+    const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
+    r.stops.forEach(s=>{
+      rows.push(`<tr>
+        <td><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:4px;background:${color}20;color:${color};font-weight:500">R${r.routeNum}</span></td>
+        <td class="td-mono">${s.seq}</td>
+        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis">${s.deliveredTo}</td>
+        <td class="td-mono">${s.weight}</td>
+        <td><span class="v-badge ${vehicleClass(r.vehicle)}">${r.vehicle}</span></td>
+        <td class="td-mono td-blue">${r.travelTime}</td>
+        <td class="td-mono td-accent">${r.dispatch}</td>
+      </tr>`);
+    });
+  });
+  tbody.innerHTML=rows.join('');
+}
+
+// ─── VIEW SWITCHING ───────────────────────────────────────────────────────────
+function showCardView() {
+  document.getElementById('cardView').style.display='block';
+  document.getElementById('detailView').style.display='none';
+  document.getElementById('backBtn').style.display='none';
+  activeRouteIdx=null;
+}
+
+function selectRoute(idx) {
+  activeRouteIdx=idx;
+  document.getElementById('cardView').style.display='none';
+  document.getElementById('detailView').style.display='block';
+  document.getElementById('backBtn').style.display='flex';
+
+  renderDetailSidebar(idx);
+  renderDetailMap(idx);
+}
+
+function renderDetailSidebar(idx) {
+  const r=allRoutes[idx];
+  const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
+  const sidebar=document.getElementById('detailSidebar');
+
+  sidebar.innerHTML=`
+    <div class="detail-sidebar-header" style="background:${color}">
+      <div class="ds-route-label">ROUTE ${r.routeNum} · ${r.zone}</div>
+      <div class="ds-zone">${r.eta!=='—'?`ETA ${r.eta}`:''} ${r.zone}</div>
+      <div class="ds-chips">
+        <div class="ds-chip">${r.vehicle}</div>
+        <div class="ds-chip">${r.travelTime}</div>
+        <div class="ds-chip">Dispatch ${r.dispatch}</div>
+      </div>
+    </div>
+    <div class="detail-metrics">
+      <div class="dm-item">
+        <div class="dm-val">${r.stops.length}</div>
+        <div class="dm-lbl">Stops</div>
+      </div>
+      <div class="dm-item">
+        <div class="dm-val">${r.totalWeight}</div>
+        <div class="dm-lbl">Total kg</div>
+      </div>
+      <div class="dm-item">
+        <div class="dm-val">${r.km}</div>
+        <div class="dm-lbl">Total km</div>
+      </div>
+    </div>
+    <div class="dispatch-row">
+      <span class="dr-label">🕐 Dispatch Time</span>
+      <span class="dr-travel">${r.travelTime}</span>
+      <span class="dr-time">${r.dispatch}</span>
+    </div>
+    <div class="stops-header">Drop Sequence — ${r.stops.length} locations</div>
+    <div class="stops-list">
+      ${r.stops.map(s=>`
+        <div class="stop-item">
+          <div class="stop-seq" style="background:${color}">${s.seq}</div>
+          <span class="stop-name" title="${s.deliveredTo}">${s.deliveredTo}</span>
+          <span class="stop-weight">${s.weight}kg</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ─── MAP ─────────────────────────────────────────────────────────────────────
+function renderDetailMap(idx) {
+  const r=allRoutes[idx];
+  const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
+
+  // Init map on first use
+  if(!map) {
+    map=L.map('map').setView([28.6,77.1],10);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+      attribution:'© OpenStreetMap © CARTO', maxZoom:19
+    }).addTo(map);
+  }
+
+  // Clear existing layers
+  mapLayers.forEach(l=>map.removeLayer(l));
+  mapLayers=[];
+
+  // Warehouse marker
+  const whIcon=L.divIcon({
+    html:`<div style="width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid ${color};box-shadow:0 2px 6px rgba(0,0,0,0.2)"></div>`,
+    iconSize:[16,16], iconAnchor:[8,8], className:''
+  });
+  const whMarker=L.marker([WAREHOUSE.lat,WAREHOUSE.lng],{icon:whIcon})
+    .bindPopup(`<div class="popup-inner"><div class="popup-route">WAREHOUSE</div><div class="popup-name">Dispatch Origin</div><div class="popup-meta"><span>${WAREHOUSE.lat.toFixed(4)}, ${WAREHOUSE.lng.toFixed(4)}</span></div></div>`)
+    .addTo(map);
+  mapLayers.push(whMarker);
+
+  // Route polyline: warehouse → all stops
+  const latlngs=[[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])];
+  const line=L.polyline(latlngs,{color,weight:3,opacity:0.8,dashArray:'8,5'}).addTo(map);
+  mapLayers.push(line);
+
+  // Stop markers
+  r.stops.forEach(s=>{
+    const icon=L.divIcon({
+      html:`<div style="background:${color};color:#fff;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,0.2)">${s.seq}</div>`,
+      iconSize:[26,26], iconAnchor:[13,13], className:''
+    });
+    const marker=L.marker([s.lat,s.lng],{icon})
+      .bindPopup(`<div class="popup-inner"><div class="popup-route">Route ${r.routeNum} · Stop ${s.seq}</div><div class="popup-name">${s.deliveredTo}</div><div class="popup-meta"><span>${s.weight} kg</span><span>${r.vehicle}</span></div></div>`)
+      .addTo(map);
+    mapLayers.push(marker);
+  });
+
+  // Fit bounds
+  const bounds=L.latLngBounds([[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])]);
+  map.fitBounds(bounds,{padding:[50,50]});
+
+  // Update legend color
+  document.getElementById('legendLine').style.background=color;
+  document.getElementById('legendDot').style.background=color;
+
+  // Force map resize
+  setTimeout(()=>map.invalidateSize(),100);
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+function exportExcel() {
+  const wb=XLSX.utils.book_new();
+  const rows=[['Delivered To','Weight (kg)','Route Number','Drop Sequence','Final Vehicle','Route Travel Time']];
+  allRoutes.forEach(r=>r.stops.forEach(s=>rows.push([s.deliveredTo,s.weight,r.routeNum,s.seq,r.vehicle,r.travelTime])));
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:50},{wch:12},{wch:14},{wch:14},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,'Dispatch Routes');
+  XLSX.writeFile(wb,`dispatch_routes_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ─── FILE INPUT ───────────────────────────────────────────────────────────────
+const zone=document.getElementById('uploadZone');
+const input=document.getElementById('fileInput');
+zone.addEventListener('click',()=>input.click());
+input.addEventListener('change',e=>{ if(e.target.files[0]) processFile(e.target.files[0]); });
+zone.addEventListener('dragover',e=>{ e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+zone.addEventListener('drop',e=>{ e.preventDefault(); zone.classList.remove('drag'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+
+document.getElementById('dateLabel').textContent=`D-2 · ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}`;
+</script>
+</body>
+</html>
