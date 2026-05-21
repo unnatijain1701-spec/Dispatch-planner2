@@ -778,6 +778,36 @@
   .saved-banner .sb-btn:hover { background: rgba(26,107,60,0.1); }
   .saved-banner .sb-btn.dismiss { color: var(--text-muted); border-color: var(--border); }
 
+  /* ── ORS SETTINGS ───────────────────────────────────────── */
+  .ors-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-family: var(--mono); font-weight: 500;
+    padding: 3px 9px; border-radius: 4px; border: 1px solid var(--border);
+    margin-top: 8px; white-space: nowrap;
+  }
+  .ors-badge.idle  { background: var(--surface2);      color: var(--text-muted); }
+  .ors-badge.ok    { background: var(--accent-light);   color: var(--accent);     border-color: rgba(26,107,60,.25); }
+  .ors-badge.error { background: var(--danger-light);   color: var(--danger);     border-color: rgba(176,48,48,.25); }
+  .ors-note { font-size: 11px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+  .ors-input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .ors-input-row .form-input { flex: 1; font-family: var(--mono); font-size: 12px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0; background: rgba(245,244,241,.85);
+    z-index: 9000; display: none;
+    align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+    backdrop-filter: blur(3px);
+  }
+  .loading-overlay.show { display: flex; }
+  .loading-spinner {
+    width: 34px; height: 34px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-secondary); font-family: var(--mono); }
+
   @media (max-width: 640px) {
     .form-grid { grid-template-columns: 1fr; }
     .modal { max-height: 95vh; }
@@ -798,6 +828,10 @@
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     All Routes
   </button>
+  <button class="header-btn" id="orsBtn" onclick="openOrsModal()" title="OpenRouteService settings">
+    <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    <span id="orsBtnLabel">ORS: Off</span>
+  </button>
   <button class="header-btn" onclick="openCustomerModal()">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
     <span>Customers</span>
@@ -816,6 +850,67 @@
   <div class="sb-actions">
     <button class="sb-btn" onclick="loadSavedRoutes()">Load Routes</button>
     <button class="sb-btn dismiss" onclick="dismissSavedBanner()">Dismiss</button>
+  </div>
+</div>
+
+<!-- ── LOADING OVERLAY ────────────────────────────────────────────── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">Fetching road distances…</div>
+</div>
+
+<!-- ── ORS SETTINGS MODAL ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="orsModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title">OpenRouteService Settings</span>
+      <button class="modal-close" onclick="closeOrsModal()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group full" style="margin-bottom:16px">
+        <label class="form-label">API Key</label>
+        <div class="ors-input-row">
+          <input class="form-input" id="orsKeyInput" type="password"
+            placeholder="Paste your ORS key here…" autocomplete="off"
+            oninput="onOrsKeyChange()">
+          <button class="header-btn primary" onclick="testOrsKey()" id="orsTestBtn">Test</button>
+        </div>
+        <div class="ors-badge idle" id="orsBadge">⬤ Not tested</div>
+        <p class="ors-note">
+          Get a free key at <strong>openrouteservice.org → Dashboard → API Keys</strong>.<br>
+          Free tier: 2,000 direction requests/day. With a valid key the tool fetches
+          real road distances (HGV profile) for every route — making dispatch times
+          significantly more accurate. Without a key it uses straight-line × 1.35.
+        </p>
+      </div>
+
+      <div class="form-group full" style="margin-bottom:16px">
+        <label class="form-label">Mode</label>
+        <select class="form-input form-select" id="orsModeSelect">
+          <option value="off">Off — use haversine estimate</option>
+          <option value="per_route">Per route — one ORS call per route (recommended)</option>
+          <option value="per_stop">Per stop — ORS matrix for all stops (most accurate, slower)</option>
+        </select>
+        <p class="ors-note" style="margin-top:6px">
+          <em>Per route</em> calls ORS once per generated route to get total km + drive time.<br>
+          <em>Per stop</em> calls the ORS Distance Matrix API to get real inter-stop distances
+          before clustering — best results but uses more API quota.
+        </p>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;color:var(--text-secondary)">
+        <strong style="color:var(--text)">How it works</strong><br>
+        Your key is only sent directly to <code style="font-family:var(--mono);font-size:11px">api.openrouteservice.org</code>
+        from your browser — it is never stored on a server. Route results are cached
+        per session to avoid repeat calls.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="header-btn" onclick="clearOrsKey()">Clear Key</button>
+      <button class="header-btn primary" onclick="saveOrsSettings()">Save &amp; Close</button>
+    </div>
   </div>
 </div>
 
@@ -1065,6 +1160,133 @@ let map = null;
 let mapLayers = [];
 let activeRouteIdx = null;
 
+// ─── ORS STATE ───────────────────────────────────────────────────────────────
+let orsKey = '';
+let orsMode = 'off';      // 'off' | 'per_route' | 'per_stop'
+let orsKeyValid = false;
+const orsCache = {};      // cacheKey → { km, mins }
+
+function getOrsKey() { return (document.getElementById('orsKeyInput')?.value || orsKey || '').trim(); }
+
+// ─── ORS MODAL ────────────────────────────────────────────────────────────────
+function openOrsModal() {
+  document.getElementById('orsKeyInput').value = orsKey;
+  document.getElementById('orsModeSelect').value = orsMode;
+  document.getElementById('orsModal').classList.add('open');
+}
+function closeOrsModal() { document.getElementById('orsModal').classList.remove('open'); }
+
+function onOrsKeyChange() {
+  // Reset badge when key is edited
+  const badge = document.getElementById('orsBadge');
+  badge.className = 'ors-badge idle';
+  badge.textContent = '⬤ Not tested';
+  orsKeyValid = false;
+}
+
+async function testOrsKey() {
+  const key = getOrsKey();
+  const badge = document.getElementById('orsBadge');
+  const btn = document.getElementById('orsTestBtn');
+  if (!key) { badge.className='ors-badge error'; badge.textContent='✗ Enter a key first'; return; }
+  btn.textContent = 'Testing…'; btn.disabled = true;
+  badge.className = 'ors-badge idle'; badge.textContent = '⬤ Testing…';
+  try {
+    const r = await fetch(`https://api.openrouteservice.org/geocode/search?api_key=${encodeURIComponent(key)}&text=Delhi&size=1`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    orsKeyValid = true;
+    badge.className = 'ors-badge ok'; badge.textContent = '✓ Valid — real road distances enabled';
+  } catch(e) {
+    orsKeyValid = false;
+    badge.className = 'ors-badge error'; badge.textContent = `✗ ${e.message}`;
+  }
+  btn.textContent = 'Test'; btn.disabled = false;
+}
+
+function saveOrsSettings() {
+  orsKey  = getOrsKey();
+  orsMode = document.getElementById('orsModeSelect').value;
+  updateOrsBtnLabel();
+  closeOrsModal();
+}
+
+function clearOrsKey() {
+  orsKey = ''; orsKeyValid = false; orsMode = 'off';
+  document.getElementById('orsKeyInput').value = '';
+  document.getElementById('orsModeSelect').value = 'off';
+  document.getElementById('orsBadge').className = 'ors-badge idle';
+  document.getElementById('orsBadge').textContent = '⬤ Not tested';
+  updateOrsBtnLabel();
+}
+
+function updateOrsBtnLabel() {
+  const lbl = document.getElementById('orsBtnLabel');
+  if (!lbl) return;
+  if (orsMode === 'off' || !orsKey) { lbl.textContent = 'ORS: Off'; document.getElementById('orsBtn').style.color=''; }
+  else { lbl.textContent = 'ORS: On'; document.getElementById('orsBtn').style.color='var(--accent)'; }
+}
+
+// ─── LOADING OVERLAY ─────────────────────────────────────────────────────────
+function setLoading(show, msg='Fetching road distances…') {
+  const el = document.getElementById('loadingOverlay');
+  document.getElementById('loadingText').textContent = msg;
+  el.classList.toggle('show', show);
+}
+
+// ─── ROAD DISTANCE (ORS or haversine fallback) ────────────────────────────────
+// waypoints: [{lat,lng}, …]  returns {km, mins}
+async function getRoadDistance(waypoints) {
+  if (!orsKey || orsMode === 'off') return haversineDist(waypoints);
+  const ck = waypoints.map(w=>`${w.lat.toFixed(4)},${w.lng.toFixed(4)}`).join('|');
+  if (orsCache[ck]) return orsCache[ck];
+  try {
+    const coords = waypoints.map(w => [w.lng, w.lat]); // ORS = [lon, lat]
+    const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/json', {
+      method: 'POST',
+      headers: { 'Authorization': orsKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coordinates: coords, units: 'km' })
+    });
+    if (!r.ok) throw new Error(`ORS ${r.status}`);
+    const d = await r.json();
+    const s = d.routes?.[0]?.summary;
+    if (!s) throw new Error('no route in response');
+    const result = { km: s.distance, mins: s.duration / 60 };
+    orsCache[ck] = result;
+    return result;
+  } catch(e) {
+    console.warn('ORS directions failed, using haversine fallback:', e.message);
+    return haversineDist(waypoints);
+  }
+}
+
+// ORS Distance Matrix for stop-to-stop distances (per_stop mode)
+// Returns a 2D array of distances in km, or null on failure
+async function getOrsMatrix(points) {
+  if (!orsKey) return null;
+  try {
+    const locs = points.map(p => [p.lng, p.lat]);
+    const r = await fetch('https://api.openrouteservice.org/v2/matrix/driving-hgv', {
+      method: 'POST',
+      headers: { 'Authorization': orsKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locations: locs, metrics: ['distance'], units: 'km' })
+    });
+    if (!r.ok) throw new Error(`ORS matrix ${r.status}`);
+    const d = await r.json();
+    return d.distances; // n×n matrix in km
+  } catch(e) {
+    console.warn('ORS matrix failed:', e.message);
+    return null;
+  }
+}
+
+function haversineDist(waypoints) {
+  let km = 0;
+  for (let i = 1; i < waypoints.length; i++)
+    km += haversine(waypoints[i-1].lat, waypoints[i-1].lng, waypoints[i].lat, waypoints[i].lng) * 1.35;
+  const mins = (km / AVG_SPEED_KMH) * 60;
+  return { km, mins };
+}
+
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
 function normalise(s) { return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'').trim(); }
 
@@ -1093,8 +1315,20 @@ function dispatchTime(etaStr, routeKm) {
   return `${String(dh).padStart(2,'0')}:${String(dm).padStart(2,'0')}`;
 }
 
-function travelTimeStr(km) {
-  const h=km/AVG_SPEED_KMH, hh=Math.floor(h), mm=Math.round((h-hh)*60);
+// Updated to use real drive time if available
+function dispatchTimeFromMins(etaStr, travelMins) {
+  if(!etaStr||etaStr==='As per customer') return '05:00';
+  const [hh,mm]=etaStr.split(':').map(Number);
+  const etaH=hh+(mm||0)/60, travelH=travelMins/60;
+  let dispH=etaH-travelH; if(dispH<MIN_DISPATCH_H) dispH=MIN_DISPATCH_H;
+  const dh=Math.floor(dispH), dm=Math.round((dispH-dh)*60);
+  return `${String(dh).padStart(2,'0')}:${String(dm).padStart(2,'0')}`;
+}
+
+function travelTimeStr(km, mins) {
+  // Use real ORS mins if provided, otherwise estimate from km
+  const h = mins != null ? mins/60 : km/AVG_SPEED_KMH;
+  const hh=Math.floor(h), mm=Math.round((h-hh)*60);
   return `${hh}h ${mm}m`;
 }
 
@@ -1112,25 +1346,46 @@ function matchToMaster(deliveredTo) {
   return best;
 }
 
-function nearestNeighbour(stops) {
+// nearestNeighbour — optionally uses ORS distance matrix (per_stop mode)
+async function nearestNeighbour(stops, distMatrix) {
   if(stops.length<=1) return stops;
   const unvisited=[...stops], route=[];
-  let cur={lat:WAREHOUSE.lat,lng:WAREHOUSE.lng};
+  let curIdx = -1; // -1 = warehouse
+
   while(unvisited.length) {
     let minD=Infinity, minI=0;
-    unvisited.forEach((s,i)=>{ const d=haversine(cur.lat,cur.lng,s.lat,s.lng); if(d<minD){minD=d;minI=i;} });
-    cur=unvisited[minI]; route.push(cur); unvisited.splice(minI,1);
+    unvisited.forEach((s,i)=>{
+      let d;
+      if(distMatrix && curIdx >= 0) {
+        // use real road distance from matrix if available
+        const origIdx = stops.indexOf(unvisited[i] === s ? s : null);
+        d = distMatrix[curIdx]?.[stops.indexOf(s)] ?? haversine(
+          curIdx<0?WAREHOUSE.lat:stops[curIdx].lat,
+          curIdx<0?WAREHOUSE.lng:stops[curIdx].lng,
+          s.lat, s.lng
+        );
+      } else {
+        const prevLat = curIdx<0 ? WAREHOUSE.lat : route[route.length-1].lat;
+        const prevLng = curIdx<0 ? WAREHOUSE.lng : route[route.length-1].lng;
+        d = haversine(prevLat, prevLng, s.lat, s.lng);
+      }
+      if(d<minD){minD=d;minI=i;}
+    });
+    const chosen = unvisited[minI];
+    curIdx = stops.indexOf(chosen);
+    route.push(chosen);
+    unvisited.splice(minI,1);
   }
   return route;
 }
 
+// routeKm — straight-line only (used for initial bucketing before ORS enrichment)
 function routeKm(stops) {
   let total=0, prev=WAREHOUSE;
   for(const s of stops) { total+=haversine(prev.lat,prev.lng,s.lat,s.lng); prev=s; }
   return total;
 }
 
-// ─── FILE PROCESSING ─────────────────────────────────────────────────────────
 function processFile(file) {
   const reader=new FileReader();
   reader.onload=e=>{
@@ -1175,7 +1430,7 @@ function bestVehicle(kg) {
   return fitting[0]; // smallest fitting as fallback
 }
 
-function buildRoutes(rows) {
+async function buildRoutes(rows) {
   const removed=[], matched=[];
   rows.forEach(row=>{
     const deliveredTo=row['Delivered To']||row['delivered to']||row['Customer Name']||row['customer name']||row['DeliveredTo']||Object.values(row)[0]||'';
@@ -1201,13 +1456,10 @@ function buildRoutes(rows) {
   const byZone={};
   matched.forEach(s=>{ if(!byZone[s.zone]) byZone[s.zone]=[]; byZone[s.zone].push(s); });
 
-  // Step 2: Within each zone, collect all stops whose dispatch time falls within
-  // a rolling 90-min window into candidate pools
+  // Step 2: Build time-window pools per zone
   let routeNum=1; allRoutes=[];
   Object.entries(byZone).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([zone, stops])=>{
     stops.sort((a,b)=>a.dispH - b.dispH);
-
-    // Build time windows (pools of compatible stops)
     const pools=[];
     stops.forEach(s=>{
       let placed=false;
@@ -1219,33 +1471,25 @@ function buildRoutes(rows) {
             p.bindingEta = s.eta;
             p.bindingEtaH = sEtaH;
           }
-          placed=true;
-          break;
+          placed=true; break;
         }
       }
-      if(!placed) {
-        pools.push({ stops:[s], dispHStart:s.dispH, bindingEta:s.eta||'', bindingEtaH:etaToHours(s.eta) });
-      }
+      if(!placed) pools.push({ stops:[s], dispHStart:s.dispH, bindingEta:s.eta||'', bindingEtaH:etaToHours(s.eta) });
     });
 
-    // Step 3: Within each pool, greedily fill vehicles to target capacity.
-    // Sort stops by distance from warehouse (nearest first) so we fill
-    // geographically tight clusters before spanning far stops.
+    // Step 3: Fill vehicles per pool
     pools.forEach(pool=>{
       const poolStops = [...pool.stops].sort((a,b)=>
         haversine(WAREHOUSE.lat,WAREHOUSE.lng,a.lat,a.lng) -
         haversine(WAREHOUSE.lat,WAREHOUSE.lng,b.lat,b.lng)
       );
-
-      // Find the largest non-infinite vehicle capacity in our fleet
       const maxFiniteCap = Math.max(...VEHICLE_CAPS.filter(v=>v.max!==Infinity).map(v=>v.max));
-
       let bucket=[], bucketWeight=0, bucketBindEta=pool.bindingEta, bucketBindEtaH=pool.bindingEtaH;
 
       const flushBucket = () => {
         if(!bucket.length) return;
-        const sequenced=nearestNeighbour(bucket), km=routeKm(sequenced);
-        const totalWeight=sequenced.reduce((s,x)=>s+x.weight,0);
+        const km=routeKm(bucket); // haversine estimate — ORS will override later
+        const totalWeight=bucket.reduce((s,x)=>s+x.weight,0);
         const vehicle=bestVehicle(totalWeight);
         const dispatch=dispatchTime(bucketBindEta, km);
         const etaSet=[...new Set(bucket.map(s=>s.eta).filter(Boolean))].sort();
@@ -1253,10 +1497,11 @@ function buildRoutes(rows) {
         const utilPct = vehicle.max !== Infinity ? Math.round((totalWeight/vehicle.max)*100) : null;
         allRoutes.push({
           routeNum, zone, eta:etaDisplay,
-          stops:sequenced.map((s,i)=>({...s,seq:i+1})),
+          stops:bucket.map((s,i)=>({...s,seq:i+1})), // seq reassigned after NN below
           km:Math.round(km*10)/10, totalWeight:Math.round(totalWeight*10)/10,
-          vehicle:vehicle.name, dispatch, travelTime:travelTimeStr(km),
-          utilPct,
+          vehicle:vehicle.name, dispatch, travelTime:travelTimeStr(km, null),
+          utilPct, bindingEta:bucketBindEta,
+          orsKm: null, orsMins: null, // to be filled
         });
         routeNum++;
         bucket=[]; bucketWeight=0;
@@ -1264,28 +1509,61 @@ function buildRoutes(rows) {
       };
 
       poolStops.forEach(s=>{
-        // If adding this stop would exceed the largest vehicle or push route too long, flush first
         const testWeight = bucketWeight + s.weight;
-        const testStops = [...bucket, s];
-        const testKm = routeKm(testStops);
-
-        if(testWeight > maxFiniteCap || testKm > MAX_ROUTE_KM) {
-          flushBucket();
-        }
-
-        bucket.push(s);
-        bucketWeight += s.weight;
-        // Update binding ETA for this bucket
+        const testKm = routeKm([...bucket, s]);
+        if(testWeight > maxFiniteCap || testKm > MAX_ROUTE_KM) flushBucket();
+        bucket.push(s); bucketWeight += s.weight;
         const sEtaH = etaToHours(s.eta);
         if(sEtaH!==null && (bucketBindEtaH===null || sEtaH < bucketBindEtaH)) {
-          bucketBindEta = s.eta;
-          bucketBindEtaH = sEtaH;
+          bucketBindEta = s.eta; bucketBindEtaH = sEtaH;
         }
       });
-
-      flushBucket(); // flush any remaining stops
+      flushBucket();
     });
   });
+
+  // ── Step 4: ORS enrichment ──────────────────────────────────────────────
+  if (orsKey && orsMode !== 'off') {
+    setLoading(true, `Fetching road distances for ${allRoutes.length} routes…`);
+
+    for (let i = 0; i < allRoutes.length; i++) {
+      const r = allRoutes[i];
+      setLoading(true, `ORS route ${i+1} / ${allRoutes.length}: ${r.zone}…`);
+
+      let distMatrix = null;
+
+      // per_stop: get full distance matrix first, use it for NN ordering
+      if (orsMode === 'per_stop' && r.stops.length > 1) {
+        const points = [WAREHOUSE, ...r.stops];
+        distMatrix = await getOrsMatrix(points);
+      }
+
+      // Re-sequence stops with nearest-neighbour (using matrix if available)
+      const resequenced = await nearestNeighbour(r.stops, distMatrix);
+      resequenced.forEach((s,i)=>s.seq=i+1);
+      r.stops = resequenced;
+
+      // Get real road distance + duration for this ordered route
+      const waypoints = [WAREHOUSE, ...r.stops];
+      const { km, mins } = await getRoadDistance(waypoints);
+      r.orsKm   = Math.round(km * 10) / 10;
+      r.orsMins = Math.round(mins);
+      r.km      = r.orsKm;   // override haversine estimate
+
+      // Recalculate dispatch time with real drive time
+      r.dispatch    = dispatchTimeFromMins(r.bindingEta, mins * 1.2); // +20% traffic
+      r.travelTime  = travelTimeStr(km, mins * 1.2);
+    }
+
+    setLoading(false);
+  } else {
+    // No ORS: run sync nearest-neighbour and reassign seq
+    for (const r of allRoutes) {
+      const seq = await nearestNeighbour(r.stops, null);
+      seq.forEach((s,i)=>s.seq=i+1);
+      r.stops = seq;
+    }
+  }
 
   renderUI();
 }
@@ -1351,7 +1629,7 @@ function renderRouteGrid() {
           </div>
           <div class="rc-metric">
             <div class="m-val">${r.km}</div>
-            <div class="m-lbl">km</div>
+            <div class="m-lbl">km${r.orsKm ? ' <span title="Real road distance via ORS" style="color:var(--accent);font-size:9px">●ORS</span>' : ''}</div>
           </div>
         </div>
         <div class="rc-dispatch">
@@ -1745,6 +2023,7 @@ zone.addEventListener('drop',e=>{ e.preventDefault(); zone.classList.remove('dra
 document.getElementById('dateLabel').textContent=`D-2 · ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}`;
 loadCustomDB();
 checkForSavedRoutes();
+updateOrsBtnLabel();
 </script>
 </body>
 </html>
