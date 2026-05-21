@@ -914,8 +914,10 @@ function processFile(file) {
   reader.readAsBinaryString(file);
 }
 
-// How close two dispatch times (in hours) must be to share a vehicle
-const DISPATCH_WINDOW_H = 0.5; // 30 minutes
+// ─── ROUTING CONFIG ──────────────────────────────────────────────────────────
+const DISPATCH_WINDOW_H = 1.5;   // 90-min window: stops departing within 90 mins share a vehicle
+const VEHICLE_FILL_TARGET = 0.75; // aim to fill vehicles to at least 75% before closing a route
+const MAX_ROUTE_KM = 120;         // don't let a single route exceed 120 km total
 
 function etaToHours(etaStr) {
   if(!etaStr || etaStr==='As per customer' || etaStr==='none' || etaStr==='') return null;
@@ -929,6 +931,21 @@ function dispatchHours(etaStr, estKm) {
   const travelH = estKm / AVG_SPEED_KMH;
   const d = etaH - travelH;
   return d < MIN_DISPATCH_H ? MIN_DISPATCH_H : d;
+}
+
+// Pick the best vehicle for a given weight, preferring a fuller larger vehicle
+// over a lighter smaller one when the fill ratio of the larger is better.
+function bestVehicle(kg) {
+  // Find smallest vehicle that fits
+  const fitting = VEHICLE_CAPS.filter(v => kg <= v.max);
+  if(!fitting.length) return VEHICLE_CAPS[VEHICLE_CAPS.length-1];
+
+  // Among fitting vehicles, prefer the one where fill% >= VEHICLE_FILL_TARGET.
+  // If multiple qualify, pick the largest (fewer vehicles on road).
+  // If none reach the target, just pick the smallest fitting (can't do better).
+  const wellFilled = fitting.filter(v => v.max !== Infinity && (kg / v.max) >= VEHICLE_FILL_TARGET);
+  if(wellFilled.length) return wellFilled[wellFilled.length-1]; // largest well-filled
+  return fitting[0]; // smallest fitting as fallback
 }
 
 function buildRoutes(rows) {
@@ -950,50 +967,93 @@ function buildRoutes(rows) {
     document.getElementById('removedList').innerHTML=removed.map(r=>`<div style="margin-top:4px">• ${r}</div>`).join('');
   } else notice.style.display='none';
 
-  // Group by zone first
+  // Step 1: Group by zone
   const byZone={};
   matched.forEach(s=>{ if(!byZone[s.zone]) byZone[s.zone]=[]; byZone[s.zone].push(s); });
 
-  // Within each zone, merge stops whose dispatch times fall within DISPATCH_WINDOW_H of the window start
+  // Step 2: Within each zone, collect all stops whose dispatch time falls within
+  // a rolling 90-min window into candidate pools
   let routeNum=1; allRoutes=[];
   Object.entries(byZone).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([zone, stops])=>{
     stops.sort((a,b)=>a.dispH - b.dispH);
 
-    const windows=[];
+    // Build time windows (pools of compatible stops)
+    const pools=[];
     stops.forEach(s=>{
       let placed=false;
-      for(const w of windows) {
-        if(s.dispH - w.dispHStart <= DISPATCH_WINDOW_H) {
-          w.stops.push(s);
-          // Keep track of tightest (earliest) ETA so we never miss a deadline
+      for(const p of pools) {
+        if(s.dispH - p.dispHStart <= DISPATCH_WINDOW_H) {
+          p.stops.push(s);
           const sEtaH = etaToHours(s.eta);
-          if(sEtaH!==null && (w.bindingEtaH===null || sEtaH < w.bindingEtaH)) {
-            w.bindingEta = s.eta;
-            w.bindingEtaH = sEtaH;
+          if(sEtaH!==null && (p.bindingEtaH===null || sEtaH < p.bindingEtaH)) {
+            p.bindingEta = s.eta;
+            p.bindingEtaH = sEtaH;
           }
           placed=true;
           break;
         }
       }
       if(!placed) {
-        windows.push({ stops:[s], dispHStart:s.dispH, bindingEta:s.eta||'', bindingEtaH:etaToHours(s.eta) });
+        pools.push({ stops:[s], dispHStart:s.dispH, bindingEta:s.eta||'', bindingEtaH:etaToHours(s.eta) });
       }
     });
 
-    windows.forEach(w=>{
-      const sequenced=nearestNeighbour(w.stops), km=routeKm(sequenced);
-      const totalWeight=sequenced.reduce((s,x)=>s+x.weight,0);
-      const vehicle=vehicleForWeight(totalWeight);
-      const dispatch=dispatchTime(w.bindingEta, km);
-      const etaSet=[...new Set(w.stops.map(s=>s.eta).filter(Boolean))].sort();
-      const etaDisplay = etaSet.length===1 ? (etaSet[0]||'—') : etaSet.join(', ');
-      allRoutes.push({
-        routeNum, zone, eta:etaDisplay,
-        stops:sequenced.map((s,i)=>({...s,seq:i+1})),
-        km:Math.round(km*10)/10, totalWeight:Math.round(totalWeight*10)/10,
-        vehicle, dispatch, travelTime:travelTimeStr(km),
+    // Step 3: Within each pool, greedily fill vehicles to target capacity.
+    // Sort stops by distance from warehouse (nearest first) so we fill
+    // geographically tight clusters before spanning far stops.
+    pools.forEach(pool=>{
+      const poolStops = [...pool.stops].sort((a,b)=>
+        haversine(WAREHOUSE.lat,WAREHOUSE.lng,a.lat,a.lng) -
+        haversine(WAREHOUSE.lat,WAREHOUSE.lng,b.lat,b.lng)
+      );
+
+      // Find the largest non-infinite vehicle capacity in our fleet
+      const maxFiniteCap = Math.max(...VEHICLE_CAPS.filter(v=>v.max!==Infinity).map(v=>v.max));
+
+      let bucket=[], bucketWeight=0, bucketBindEta=pool.bindingEta, bucketBindEtaH=pool.bindingEtaH;
+
+      const flushBucket = () => {
+        if(!bucket.length) return;
+        const sequenced=nearestNeighbour(bucket), km=routeKm(sequenced);
+        const totalWeight=sequenced.reduce((s,x)=>s+x.weight,0);
+        const vehicle=bestVehicle(totalWeight);
+        const dispatch=dispatchTime(bucketBindEta, km);
+        const etaSet=[...new Set(bucket.map(s=>s.eta).filter(Boolean))].sort();
+        const etaDisplay = etaSet.length===1 ? (etaSet[0]||'—') : etaSet.join(', ');
+        const utilPct = vehicle.max !== Infinity ? Math.round((totalWeight/vehicle.max)*100) : null;
+        allRoutes.push({
+          routeNum, zone, eta:etaDisplay,
+          stops:sequenced.map((s,i)=>({...s,seq:i+1})),
+          km:Math.round(km*10)/10, totalWeight:Math.round(totalWeight*10)/10,
+          vehicle:vehicle.name, dispatch, travelTime:travelTimeStr(km),
+          utilPct,
+        });
+        routeNum++;
+        bucket=[]; bucketWeight=0;
+        bucketBindEta=pool.bindingEta; bucketBindEtaH=pool.bindingEtaH;
+      };
+
+      poolStops.forEach(s=>{
+        // If adding this stop would exceed the largest vehicle or push route too long, flush first
+        const testWeight = bucketWeight + s.weight;
+        const testStops = [...bucket, s];
+        const testKm = routeKm(testStops);
+
+        if(testWeight > maxFiniteCap || testKm > MAX_ROUTE_KM) {
+          flushBucket();
+        }
+
+        bucket.push(s);
+        bucketWeight += s.weight;
+        // Update binding ETA for this bucket
+        const sEtaH = etaToHours(s.eta);
+        if(sEtaH!==null && (bucketBindEtaH===null || sEtaH < bucketBindEtaH)) {
+          bucketBindEta = s.eta;
+          bucketBindEtaH = sEtaH;
+        }
       });
-      routeNum++;
+
+      flushBucket(); // flush any remaining stops
     });
   });
 
@@ -1041,6 +1101,7 @@ function renderRouteGrid() {
           <div class="rc-metric">
             <div class="m-val">${r.totalWeight}</div>
             <div class="m-lbl">kg</div>
+            ${r.utilPct!==null?`<div style="margin-top:4px;height:3px;border-radius:2px;background:var(--border);overflow:hidden"><div style="width:${Math.min(r.utilPct,100)}%;height:100%;background:${r.utilPct>=75?'var(--accent)':r.utilPct>=50?'var(--warn)':'var(--danger)'}"></div></div><div style="font-size:9px;margin-top:2px;color:${r.utilPct>=75?'var(--accent)':r.utilPct>=50?'var(--warn)':'var(--danger)'};font-family:var(--mono)">${r.utilPct}% full</div>`:''}
           </div>
           <div class="rc-metric">
             <div class="m-val">${r.km}</div>
