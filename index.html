@@ -658,6 +658,132 @@
   .route-card:nth-child(4) { animation-delay: 0.08s; }
   .route-card:nth-child(5) { animation-delay: 0.10s; }
   .route-card:nth-child(6) { animation-delay: 0.12s; }
+
+  /* ── HEADER BUTTONS ─────────────────────────────────────── */
+  .header-btn {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-secondary);
+    background: none; border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 20px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .header-btn:hover { background: var(--surface2); color: var(--text); }
+  .header-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .header-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .header-btn.primary:hover { background: #155c32; }
+  .header-btn.primary svg { stroke: white; }
+
+  /* ── DROPPED WEIGHT STAT ────────────────────────────────── */
+  .stat-card.danger { border-color: rgba(176,48,48,0.3); background: var(--danger-light); }
+  .stat-card.danger .stat-info .value { color: var(--danger); }
+  .stat-card.danger .stat-info .label { color: var(--danger); }
+
+  /* ── MODAL OVERLAY ──────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    z-index: 2000; display: none; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); width: 100%; max-width: 680px;
+    max-height: 90vh; display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; transition: all 0.15s;
+  }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+  .modal-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+  .modal-footer {
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0;
+  }
+
+  /* ── FORM ───────────────────────────────────────────────── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1/-1; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.7px; }
+  .form-input {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-family: var(--sans); font-size: 13px; color: var(--text);
+    background: var(--surface); transition: border-color 0.15s;
+    outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239A9590' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+
+  /* ── CUSTOMER LIST ──────────────────────────────────────── */
+  .cust-search { margin-bottom: 14px; }
+  .cust-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+  .cust-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--surface);
+    transition: background 0.1s;
+  }
+  .cust-row:hover { background: var(--surface2); }
+  .cust-info { flex: 1; min-width: 0; }
+  .cust-name { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cust-meta { font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 2px; }
+  .cust-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .cust-btn {
+    padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+    font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    background: var(--surface); color: var(--text-secondary);
+  }
+  .cust-btn:hover { background: var(--surface2); }
+  .cust-btn.del { color: var(--danger); border-color: rgba(176,48,48,0.2); }
+  .cust-btn.del:hover { background: var(--danger-light); }
+
+  /* ── VEHICLE OVERRIDE on route card ────────────────────── */
+  .vehicle-override {
+    font-size: 11px; padding: 2px 6px; border-radius: 4px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-family: var(--mono); font-weight: 500; cursor: pointer;
+    color: var(--text-secondary); transition: all 0.15s;
+  }
+  .vehicle-override:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── SAVED ROUTES BANNER ────────────────────────────────── */
+  .saved-banner {
+    background: var(--accent-light); border: 1px solid rgba(26,107,60,0.2);
+    border-radius: var(--radius-sm); padding: 10px 16px;
+    margin-bottom: 14px; display: none;
+    font-size: 13px; color: var(--accent);
+    align-items: center; gap: 10px;
+  }
+  .saved-banner.show { display: flex; }
+  .saved-banner strong { font-weight: 600; }
+  .saved-banner .sb-actions { margin-left: auto; display: flex; gap: 8px; }
+  .saved-banner .sb-btn {
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    background: none; border: 1px solid rgba(26,107,60,0.3);
+    border-radius: 20px; padding: 3px 12px; color: var(--accent);
+    transition: all 0.15s;
+  }
+  .saved-banner .sb-btn:hover { background: rgba(26,107,60,0.1); }
+  .saved-banner .sb-btn.dismiss { color: var(--text-muted); border-color: var(--border); }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .modal { max-height: 95vh; }
+    .header-btn span { display: none; }
+    .header-btn { padding: 5px 8px; }
+  }
 </style>
 </head>
 <body>
@@ -672,8 +798,99 @@
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     All Routes
   </button>
+  <button class="header-btn" onclick="openCustomerModal()">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <span>Customers</span>
+  </button>
+  <button class="header-btn primary" id="saveBtn" onclick="saveRoutes()" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    <span>Save</span>
+  </button>
   <div class="date-chip" id="dateLabel">Loading…</div>
 </header>
+
+<!-- ── SAVED ROUTES BANNER ──────────────────────────────────────── -->
+<div class="saved-banner" id="savedBanner">
+  <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:2;flex-shrink:0"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg>
+  <span><strong id="savedBannerText">Routes saved.</strong> Reload last session?</span>
+  <div class="sb-actions">
+    <button class="sb-btn" onclick="loadSavedRoutes()">Load Routes</button>
+    <button class="sb-btn dismiss" onclick="dismissSavedBanner()">Dismiss</button>
+  </div>
+</div>
+
+<!-- ── CUSTOMER MANAGEMENT MODAL ────────────────────────────────── -->
+<div class="modal-overlay" id="customerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Manage Customers</span>
+      <button class="modal-close" onclick="closeCustomerModal()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <input class="form-input" id="custSearch" placeholder="Search customers…" oninput="renderCustomerList()" style="flex:1;min-width:180px">
+        <button class="header-btn primary" onclick="openAddCustomer()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Customer
+        </button>
+      </div>
+      <div class="cust-list" id="custList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD / EDIT CUSTOMER MODAL ────────────────────────────────── -->
+<div class="modal-overlay" id="addCustModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="addCustTitle">Add Customer</span>
+      <button class="modal-close" onclick="closeAddCustomer()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Customer Name</label>
+          <input class="form-input" id="cfName" placeholder="Full customer name as it appears in order sheet">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Latitude</label>
+          <input class="form-input" id="cfLat" placeholder="e.g. 28.6139" type="number" step="any">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude</label>
+          <input class="form-input" id="cfLng" placeholder="e.g. 77.2090" type="number" step="any">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zone</label>
+          <input class="form-input" id="cfZone" placeholder="e.g. GURGAON" list="zoneList">
+          <datalist id="zoneList"></datalist>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ETA (HH:MM)</label>
+          <input class="form-input" id="cfEta" placeholder="e.g. 12:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Default Vehicle</label>
+          <select class="form-input form-select" id="cfVehicle">
+            <option value="2W">2W</option>
+            <option value="Tata Ace" selected>Tata Ace</option>
+            <option value="Bolero Pickup">Bolero Pickup</option>
+            <option value="Eicher 14 ft">Eicher 14 ft</option>
+          </select>
+        </div>
+      </div>
+      <div id="cfError" style="margin-top:12px;font-size:12px;color:var(--danger);display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="header-btn" onclick="closeAddCustomer()">Cancel</button>
+      <button class="header-btn primary" onclick="saveCustomer()">Save Customer</button>
+    </div>
+  </div>
+</div>
 
 <div class="container">
 
@@ -734,6 +951,16 @@
         <div class="label">Vehicles</div>
         <div class="value" id="statVehicles">0</div>
         <div class="sub">deployed today</div>
+      </div>
+    </div>
+    <div class="stat-card" id="droppedCard" style="display:none">
+      <div class="stat-icon" style="background:var(--danger-light)">
+        <svg viewBox="0 0 24 24" style="stroke:var(--danger);fill:none;stroke-width:1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="label" style="color:var(--danger)">Dropped Weight</div>
+        <div class="value" id="statDropped" style="color:var(--danger)">0</div>
+        <div class="sub" id="statDroppedSub">kg not routed</div>
       </div>
     </div>
   </div>
@@ -955,16 +1182,19 @@ function buildRoutes(rows) {
     const weight=parseFloat(row['Weight']||row['weight']||row['Weight (kg)']||Object.values(row)[1]||0)||0;
     if(!deliveredTo) return;
     const master=matchToMaster(String(deliveredTo));
-    if(!master){ removed.push(String(deliveredTo)); return; }
+    if(!master){ removed.push({name:String(deliveredTo), weight}); return; }
     const estKm = haversine(WAREHOUSE.lat, WAREHOUSE.lng, master.lat, master.lng);
     const dispH = dispatchHours(master.eta, estKm);
     matched.push({ deliveredTo:String(deliveredTo), weight, lat:master.lat, lng:master.lng, zone:master.zone, eta:master.eta, vehicle:master.vehicle, dispH });
   });
 
   const notice=document.getElementById('removedNotice');
+  lastRemovedCount=removed.length;
+  lastDroppedWeight=removed.reduce((s,r)=>s+(r.weight||0),0);
   if(removed.length>0) {
     notice.style.display='block';
-    document.getElementById('removedList').innerHTML=removed.map(r=>`<div style="margin-top:4px">• ${r}</div>`).join('');
+    const totalDrop=Math.round(lastDroppedWeight);
+    document.getElementById('removedList').innerHTML=`<div style="margin-bottom:6px;font-weight:600">${totalDrop} kg total dropped</div>`+removed.map(r=>`<div style="margin-top:3px">• ${r.name}${r.weight?` — ${r.weight}kg`:''}</div>`).join('');
   } else notice.style.display='none';
 
   // Step 1: Group by zone
@@ -1073,6 +1303,20 @@ function renderUI() {
   document.getElementById('emptyState').style.display='none';
   document.getElementById('routeCount').textContent=`${allRoutes.length} routes`;
 
+  // Show dropped weight stat if any
+  if(lastDroppedWeight>0) {
+    document.getElementById('statDropped').textContent=Math.round(lastDroppedWeight);
+    document.getElementById('statDroppedSub').textContent=`kg dropped (${lastRemovedCount} customer${lastRemovedCount!==1?'s':''})`;
+    document.getElementById('droppedCard').style.display='flex';
+    document.getElementById('statsBar').style.gridTemplateColumns='repeat(5,1fr)';
+  } else {
+    document.getElementById('droppedCard').style.display='none';
+    document.getElementById('statsBar').style.gridTemplateColumns='';
+  }
+
+  // Show save button
+  document.getElementById('saveBtn').style.display='flex';
+
   renderRouteGrid();
   renderTable();
   showCardView();
@@ -1090,7 +1334,9 @@ function renderRouteGrid() {
         <div class="rc-num" style="background:${color}">R${r.routeNum}</div>
         <div class="rc-zone" title="${r.zone}">${r.zone}</div>
         <div class="rc-eta">${r.eta}</div>
-        <div class="v-badge ${vehicleClass(r.vehicle)}">${r.vehicle}</div>
+        <select class="vehicle-override" onchange="overrideVehicle(${idx},this.value)" onclick="event.stopPropagation()" title="Override vehicle">
+          ${['2W','Tata Ace','Bolero Pickup','Eicher 14 ft','Multi Vehicle'].map(v=>`<option value="${v}" ${v===r.vehicle?'selected':''}>${v}</option>`).join('')}
+        </select>
       </div>
       <div class="rc-body">
         <div class="rc-metrics">
@@ -1277,13 +1523,215 @@ function renderDetailMap(idx) {
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
 function exportExcel() {
   const wb=XLSX.utils.book_new();
-  const rows=[['Delivered To','Weight (kg)','Route Number','Drop Sequence','Final Vehicle','Route Travel Time']];
-  allRoutes.forEach(r=>r.stops.forEach(s=>rows.push([s.deliveredTo,s.weight,r.routeNum,s.seq,r.vehicle,r.travelTime])));
+
+  // Sheet 1: all stops
+  const rows=[['Delivered To','Weight (kg)','Route Number','Drop Sequence','Final Vehicle','Route Travel Time','Dispatch Time']];
+  allRoutes.forEach(r=>r.stops.forEach(s=>rows.push([s.deliveredTo,s.weight,r.routeNum,s.seq,r.vehicle,r.travelTime,r.dispatch])));
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:50},{wch:12},{wch:14},{wch:14},{wch:16},{wch:18}];
+  ws['!cols']=[{wch:50},{wch:12},{wch:14},{wch:14},{wch:16},{wch:18},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws,'Dispatch Routes');
+
+  // Sheet 2: route summary with utilisation
+  const sumRows=[['Route #','Zone','ETA','Vehicle','Stops','Total kg','Vehicle Cap (kg)','Fill %','Total km','Travel Time','Dispatch Time']];
+  allRoutes.forEach(r=>{
+    const cap=VEHICLE_CAPS.find(v=>v.name===r.vehicle);
+    const capKg=cap&&cap.max!==Infinity?cap.max:'—';
+    const fillPct=cap&&cap.max!==Infinity?Math.round((r.totalWeight/cap.max)*100)+'%':'—';
+    sumRows.push([r.routeNum,r.zone,r.eta,r.vehicle,r.stops.length,r.totalWeight,capKg,fillPct,r.km,r.travelTime,r.dispatch]);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(sumRows);
+  ws2['!cols']=[{wch:10},{wch:16},{wch:12},{wch:16},{wch:8},{wch:12},{wch:16},{wch:10},{wch:12},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Route Summary');
+
   XLSX.writeFile(wb,`dispatch_routes_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let lastDroppedWeight=0, lastRemovedCount=0;
+let editingCustIdx=null; // null = adding new
+
+// ─── CUSTOMER MANAGEMENT ─────────────────────────────────────────────────────
+// Load any custom customers saved in localStorage and merge into MASTER_DB
+function loadCustomDB() {
+  try {
+    const saved=localStorage.getItem('dispatch_custom_customers');
+    if(saved) {
+      const custom=JSON.parse(saved);
+      custom.forEach(c=>{ if(!MASTER_DB.find(m=>m.name===c.name)) MASTER_DB.push(c); });
+      rebuildMasterMap();
+    }
+  } catch(e){}
+}
+
+function saveCustomDB() {
+  // Only save customers not in the original hardcoded list
+  // We save ALL entries that were added/edited via the UI (stored separately)
+  try {
+    const key='dispatch_custom_customers';
+    const existing=JSON.parse(localStorage.getItem(key)||'[]');
+    localStorage.setItem(key, JSON.stringify(existing));
+  } catch(e){}
+}
+
+function rebuildMasterMap() {
+  masterMap.clear();
+  MASTER_DB.forEach(r=>masterMap.set(normalise(r.name),r));
+}
+
+function openCustomerModal() {
+  renderCustomerList();
+  // Populate zone datalist
+  const zones=[...new Set(MASTER_DB.map(r=>r.zone).filter(Boolean))].sort();
+  document.getElementById('zoneList').innerHTML=zones.map(z=>`<option value="${z}">`).join('');
+  document.getElementById('customerModal').classList.add('open');
+}
+function closeCustomerModal() { document.getElementById('customerModal').classList.remove('open'); }
+
+function renderCustomerList() {
+  const q=(document.getElementById('custSearch').value||'').toLowerCase();
+  const filtered=MASTER_DB.filter(c=>!q||c.name.toLowerCase().includes(q));
+  const list=document.getElementById('custList');
+  if(!filtered.length) { list.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">No customers found</div>'; return; }
+  list.innerHTML=filtered.map((c,i)=>{
+    const realIdx=MASTER_DB.indexOf(c);
+    return `<div class="cust-row">
+      <div class="cust-info">
+        <div class="cust-name" title="${c.name}">${c.name}</div>
+        <div class="cust-meta">${c.zone} · ETA ${c.eta||'—'} · ${c.vehicle} · ${c.lat.toFixed(4)},${c.lng.toFixed(4)}</div>
+      </div>
+      <div class="cust-actions">
+        <button class="cust-btn" onclick="openEditCustomer(${realIdx})">Edit</button>
+        <button class="cust-btn del" onclick="deleteCustomer(${realIdx})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddCustomer() {
+  editingCustIdx=null;
+  document.getElementById('addCustTitle').textContent='Add Customer';
+  document.getElementById('cfName').value='';
+  document.getElementById('cfLat').value='';
+  document.getElementById('cfLng').value='';
+  document.getElementById('cfZone').value='';
+  document.getElementById('cfEta').value='';
+  document.getElementById('cfVehicle').value='Tata Ace';
+  document.getElementById('cfError').style.display='none';
+  document.getElementById('addCustModal').classList.add('open');
+}
+
+function openEditCustomer(idx) {
+  editingCustIdx=idx;
+  const c=MASTER_DB[idx];
+  document.getElementById('addCustTitle').textContent='Edit Customer';
+  document.getElementById('cfName').value=c.name;
+  document.getElementById('cfLat').value=c.lat;
+  document.getElementById('cfLng').value=c.lng;
+  document.getElementById('cfZone').value=c.zone;
+  document.getElementById('cfEta').value=c.eta||'';
+  document.getElementById('cfVehicle').value=c.vehicle||'Tata Ace';
+  document.getElementById('cfError').style.display='none';
+  document.getElementById('addCustModal').classList.add('open');
+}
+
+function closeAddCustomer() { document.getElementById('addCustModal').classList.remove('open'); }
+
+function saveCustomer() {
+  const name=document.getElementById('cfName').value.trim();
+  const lat=parseFloat(document.getElementById('cfLat').value);
+  const lng=parseFloat(document.getElementById('cfLng').value);
+  const zone=document.getElementById('cfZone').value.trim();
+  const eta=document.getElementById('cfEta').value.trim();
+  const vehicle=document.getElementById('cfVehicle').value;
+  const errEl=document.getElementById('cfError');
+
+  if(!name){errEl.textContent='Customer name is required.';errEl.style.display='block';return;}
+  if(isNaN(lat)||isNaN(lng)){errEl.textContent='Valid latitude and longitude are required.';errEl.style.display='block';return;}
+  if(!zone){errEl.textContent='Zone is required.';errEl.style.display='block';return;}
+
+  const entry={name,lat,lng,zone,eta,vehicle};
+
+  if(editingCustIdx!==null) {
+    MASTER_DB[editingCustIdx]=entry;
+  } else {
+    MASTER_DB.push(entry);
+  }
+  rebuildMasterMap();
+
+  // Persist custom entries
+  try {
+    const existing=JSON.parse(localStorage.getItem('dispatch_custom_customers')||'[]');
+    if(editingCustIdx!==null) {
+      const oldName=document.getElementById('cfName').defaultValue;
+      const ei=existing.findIndex(e=>e.name===oldName);
+      if(ei>=0) existing[ei]=entry; else existing.push(entry);
+    } else { existing.push(entry); }
+    localStorage.setItem('dispatch_custom_customers',JSON.stringify(existing));
+  } catch(e){}
+
+  closeAddCustomer();
+  renderCustomerList();
+}
+
+function deleteCustomer(idx) {
+  const c=MASTER_DB[idx];
+  if(!confirm(`Delete "${c.name}"?`)) return;
+  MASTER_DB.splice(idx,1);
+  rebuildMasterMap();
+  try {
+    const existing=JSON.parse(localStorage.getItem('dispatch_custom_customers')||'[]');
+    const ei=existing.findIndex(e=>e.name===c.name);
+    if(ei>=0){ existing.splice(ei,1); localStorage.setItem('dispatch_custom_customers',JSON.stringify(existing)); }
+  } catch(e){}
+  renderCustomerList();
+}
+
+// ─── VEHICLE OVERRIDE ────────────────────────────────────────────────────────
+function overrideVehicle(idx, newVehicle) {
+  allRoutes[idx].vehicle=newVehicle;
+  const cap=VEHICLE_CAPS.find(v=>v.name===newVehicle);
+  allRoutes[idx].utilPct=cap&&cap.max!==Infinity?Math.round((allRoutes[idx].totalWeight/cap.max)*100):null;
+  renderRouteGrid();
+  renderTable();
+}
+
+// ─── SAVE / LOAD ROUTES ──────────────────────────────────────────────────────
+function saveRoutes() {
+  try {
+    const payload={routes:allRoutes, savedAt:Date.now()};
+    localStorage.setItem('dispatch_saved_routes',JSON.stringify(payload));
+    const btn=document.getElementById('saveBtn');
+    btn.innerHTML=`<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:white;fill:none;stroke-width:2"><polyline points="20 6 9 17 4 12"/></svg><span>Saved</span>`;
+    setTimeout(()=>{ btn.innerHTML=`<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:white;fill:none;stroke-width:2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span>Save</span>`; },2000);
+  } catch(e){ alert('Could not save: '+e.message); }
+}
+
+function checkForSavedRoutes() {
+  try {
+    const saved=localStorage.getItem('dispatch_saved_routes');
+    if(!saved) return;
+    const payload=JSON.parse(saved);
+    const age=Date.now()-payload.savedAt;
+    if(age>48*3600*1000) { localStorage.removeItem('dispatch_saved_routes'); return; }
+    const d=new Date(payload.savedAt);
+    const label=d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('savedBannerText').textContent=`Routes from ${label} (${payload.routes.length} routes)`;
+    document.getElementById('savedBanner').classList.add('show');
+  } catch(e){}
+}
+
+function loadSavedRoutes() {
+  try {
+    const payload=JSON.parse(localStorage.getItem('dispatch_saved_routes'));
+    allRoutes=payload.routes;
+    document.getElementById('savedBanner').classList.remove('show');
+    document.getElementById('uploadZone').style.display='none';
+    lastDroppedWeight=0; lastRemovedCount=0;
+    renderUI();
+  } catch(e){ alert('Could not load saved routes.'); }
+}
+
+function dismissSavedBanner() { document.getElementById('savedBanner').classList.remove('show'); }
 
 // ─── FILE INPUT ───────────────────────────────────────────────────────────────
 const zone=document.getElementById('uploadZone');
@@ -1295,6 +1743,8 @@ zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
 zone.addEventListener('drop',e=>{ e.preventDefault(); zone.classList.remove('drag'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
 
 document.getElementById('dateLabel').textContent=`D-2 · ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}`;
+loadCustomDB();
+checkForSavedRoutes();
 </script>
 </body>
 </html>
