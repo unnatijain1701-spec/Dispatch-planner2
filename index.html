@@ -903,8 +903,7 @@
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;color:var(--text-secondary)">
         <strong style="color:var(--text)">How it works</strong><br>
         Your key is only sent directly to <code style="font-family:var(--mono);font-size:11px">api.openrouteservice.org</code>
-        from your browser — it is never stored on a server. Route results are cached
-        per session to avoid repeat calls.
+        from your browser. <strong style="color:var(--warn)">It is saved in your browser's localStorage</strong> so it persists across sessions — clear your browser data if you want to remove it. Route results are cached per session to avoid repeat calls.
       </div>
     </div>
     <div class="modal-footer">
@@ -1248,15 +1247,37 @@ async function getRoadDistance(waypoints) {
     });
     if (!r.ok) throw new Error(`ORS ${r.status}`);
     const d = await r.json();
-    const s = d.routes?.[0]?.summary;
-    if (!s) throw new Error('no route in response');
-    const result = { km: s.distance, mins: s.duration / 60 };
+    const route = d.routes?.[0];
+    if (!route) throw new Error('no route in response');
+    const s = route.summary;
+    // Decode geometry — ORS returns encoded polyline
+    let geometry = null;
+    if (route.geometry) {
+      geometry = decodePolyline(route.geometry);
+    }
+    const result = { km: s.distance, mins: s.duration / 60, geometry };
     orsCache[ck] = result;
     return result;
   } catch(e) {
     console.warn('ORS directions failed, using haversine fallback:', e.message);
     return haversineDist(waypoints);
   }
+}
+
+// Decode Google/ORS encoded polyline to [[lat,lng], ...]
+function decodePolyline(encoded) {
+  const coords = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let b, shift = 0, result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    const dlat = (result & 1) ? ~(result >> 1) : (result >> 1); lat += dlat;
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    const dlng = (result & 1) ? ~(result >> 1) : (result >> 1); lng += dlng;
+    coords.push([lat / 1e5, lng / 1e5]);
+  }
+  return coords;
 }
 
 // ORS Distance Matrix for stop-to-stop distances (per_stop mode)
@@ -1456,25 +1477,24 @@ async function buildRoutes(rows) {
   const byZone={};
   matched.forEach(s=>{ if(!byZone[s.zone]) byZone[s.zone]=[]; byZone[s.zone].push(s); });
 
-  // Step 2: Build time-window pools per zone
+  // Step 2: Group by ETA hour within each zone — different ETA hours always = different route
+  // A 10:00 and 12:00 delivery in same zone must NEVER share a vehicle
   let routeNum=1; allRoutes=[];
   Object.entries(byZone).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([zone, stops])=>{
-    stops.sort((a,b)=>a.dispH - b.dispH);
-    const pools=[];
-    stops.forEach(s=>{
-      let placed=false;
-      for(const p of pools) {
-        if(s.dispH - p.dispHStart <= DISPATCH_WINDOW_H) {
-          p.stops.push(s);
-          const sEtaH = etaToHours(s.eta);
-          if(sEtaH!==null && (p.bindingEtaH===null || sEtaH < p.bindingEtaH)) {
-            p.bindingEta = s.eta;
-            p.bindingEtaH = sEtaH;
-          }
-          placed=true; break;
-        }
-      }
-      if(!placed) pools.push({ stops:[s], dispHStart:s.dispH, bindingEta:s.eta||'', bindingEtaH:etaToHours(s.eta) });
+    // Group strictly by ETA hour
+    const etaGroups = {};
+    stops.forEach(s => {
+      const etaKey = s.eta || 'none';
+      if (!etaGroups[etaKey]) etaGroups[etaKey] = [];
+      etaGroups[etaKey].push(s);
+    });
+
+    // Convert each ETA group into pools (for vehicle capacity splitting within same ETA)
+    const pools = [];
+    Object.entries(etaGroups).sort((a,b) => (etaToHours(a[0])||99) - (etaToHours(b[0])||99)).forEach(([etaKey, etaStops]) => {
+      const bindingEtaH = etaToHours(etaKey);
+      // Single pool per ETA group — vehicle bucketing handles splits below
+      pools.push({ stops: etaStops, dispHStart: etaToHours(etaKey)||MIN_DISPATCH_H, bindingEta: etaKey, bindingEtaH });
     });
 
     // Step 3: Fill vehicles per pool
@@ -1543,12 +1563,13 @@ async function buildRoutes(rows) {
       resequenced.forEach((s,i)=>s.seq=i+1);
       r.stops = resequenced;
 
-      // Get real road distance + duration for this ordered route
+      // Get real road distance + duration + geometry for this ordered route
       const waypoints = [WAREHOUSE, ...r.stops];
-      const { km, mins } = await getRoadDistance(waypoints);
-      r.orsKm   = Math.round(km * 10) / 10;
-      r.orsMins = Math.round(mins);
-      r.km      = r.orsKm;   // override haversine estimate
+      const { km, mins, geometry } = await getRoadDistance(waypoints);
+      r.orsKm      = Math.round(km * 10) / 10;
+      r.orsMins    = Math.round(mins);
+      r.km         = r.orsKm;   // override haversine estimate
+      r.orsGeometry = geometry || null; // store road geometry for map
 
       // Recalculate dispatch time with real drive time
       r.dispatch    = dispatchTimeFromMins(r.bindingEta, mins * 1.2); // +20% traffic
@@ -1738,6 +1759,12 @@ function renderDetailSidebar(idx) {
           <span class="stop-name" title="${s.deliveredTo}">${s.deliveredTo}</span>
           <span class="stop-weight">${s.weight}kg</span>
         </div>`).join('')}
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border)">
+      <button onclick="copyRouteForWhatsApp(${idx})" style="width:100%;padding:9px 14px;background:#25D366;color:white;border:none;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.989.518 3.846 1.426 5.448L2 22l4.658-1.407C8.15 21.481 10.016 22 12 22c5.523 0 10-4.477 10-10S17.522 2 12 2z" fill-opacity="0"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.126.558 4.121 1.532 5.852L0 24l6.363-1.667C8.05 23.394 9.983 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.662-.542-5.153-1.476l-.369-.22-3.779.99.999-3.672-.241-.379C2.574 15.68 2 13.9 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        Copy for WhatsApp
+      </button>
     </div>`;
 }
 
@@ -1768,9 +1795,15 @@ function renderDetailMap(idx) {
     .addTo(map);
   mapLayers.push(whMarker);
 
-  // Route polyline: warehouse → all stops
-  const latlngs=[[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])];
-  const line=L.polyline(latlngs,{color,weight:3,opacity:0.8,dashArray:'8,5'}).addTo(map);
+  // Route polyline: use real road geometry if available, else straight line fallback
+  let latlngs;
+  if (r.orsGeometry && r.orsGeometry.length > 1) {
+    latlngs = r.orsGeometry; // real road shape from ORS
+  } else {
+    latlngs = [[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])];
+  }
+  const lineStyle = r.orsGeometry ? {color,weight:3,opacity:0.85} : {color,weight:3,opacity:0.8,dashArray:'8,5'};
+  const line=L.polyline(latlngs, lineStyle).addTo(map);
   mapLayers.push(line);
 
   // Stop markers
@@ -1796,6 +1829,42 @@ function renderDetailMap(idx) {
   // Force map resize
   setTimeout(()=>map.invalidateSize(),100);
   setTimeout(()=>map.invalidateSize(),400);
+}
+
+// ─── WHATSAPP COPY ───────────────────────────────────────────────────────────
+function copyRouteForWhatsApp(idx) {
+  const r = allRoutes[idx];
+  const lines = [];
+  lines.push(`🚛 *Route ${r.routeNum} — ${r.zone}*`);
+  lines.push(`📦 Vehicle: ${r.vehicle}`);
+  lines.push(`⏰ Dispatch: ${r.dispatch}`);
+  lines.push(`🛣 Distance: ${r.km} km · Travel: ${r.travelTime}`);
+  lines.push(`⚖️ Total load: ${r.totalWeight} kg`);
+  lines.push(``);
+  lines.push(`*Drop Sequence (${r.stops.length} stops):*`);
+  r.stops.forEach(s => {
+    lines.push(`${s.seq}. ${s.deliveredTo} — ${s.weight} kg`);
+  });
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    // Flash the button green briefly
+    const btn = event.target.closest('button');
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ Copied!';
+      btn.style.background = '#128C7E';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = '#25D366'; }, 2000);
+    }
+  }).catch(() => {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Route copied to clipboard!');
+  });
 }
 
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
@@ -1842,13 +1911,13 @@ function loadCustomDB() {
 }
 
 function saveCustomDB() {
-  // Only save customers not in the original hardcoded list
-  // We save ALL entries that were added/edited via the UI (stored separately)
+  // Save all custom customers to localStorage
+  // Custom customers are those added via the UI (tracked in customEntries set)
   try {
-    const key='dispatch_custom_customers';
-    const existing=JSON.parse(localStorage.getItem(key)||'[]');
-    localStorage.setItem(key, JSON.stringify(existing));
-  } catch(e){}
+    const key = 'dispatch_custom_customers';
+    const saved = JSON.parse(localStorage.getItem(key) || '[]');
+    localStorage.setItem(key, JSON.stringify(saved));
+  } catch(e) {}
 }
 
 function rebuildMasterMap() {
@@ -1930,22 +1999,25 @@ function saveCustomer() {
   const entry={name,lat,lng,zone,eta,vehicle};
 
   if(editingCustIdx!==null) {
-    MASTER_DB[editingCustIdx]=entry;
+    const oldEntry = MASTER_DB[editingCustIdx];
+    MASTER_DB[editingCustIdx] = entry;
+    // Update localStorage: find by old name and replace
+    try {
+      const existing = JSON.parse(localStorage.getItem('dispatch_custom_customers') || '[]');
+      const ei = existing.findIndex(e => e.name === oldEntry.name);
+      if (ei >= 0) existing[ei] = entry; else existing.push(entry);
+      localStorage.setItem('dispatch_custom_customers', JSON.stringify(existing));
+    } catch(e) {}
   } else {
     MASTER_DB.push(entry);
+    // Add to localStorage
+    try {
+      const existing = JSON.parse(localStorage.getItem('dispatch_custom_customers') || '[]');
+      existing.push(entry);
+      localStorage.setItem('dispatch_custom_customers', JSON.stringify(existing));
+    } catch(e) {}
   }
   rebuildMasterMap();
-
-  // Persist custom entries
-  try {
-    const existing=JSON.parse(localStorage.getItem('dispatch_custom_customers')||'[]');
-    if(editingCustIdx!==null) {
-      const oldName=document.getElementById('cfName').defaultValue;
-      const ei=existing.findIndex(e=>e.name===oldName);
-      if(ei>=0) existing[ei]=entry; else existing.push(entry);
-    } else { existing.push(entry); }
-    localStorage.setItem('dispatch_custom_customers',JSON.stringify(existing));
-  } catch(e){}
 
   closeAddCustomer();
   renderCustomerList();
