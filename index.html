@@ -37,6 +37,7 @@
     --sans: 'DM Sans', sans-serif;
     --radius: 10px;
     --radius-sm: 6px;
+    --sidebar-w: 220px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -93,6 +94,137 @@
   }
   .back-btn:hover { background: var(--surface2); color: var(--text); }
   .back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* ── APP BODY LAYOUT ─────────────────────────────────────── */
+  .app-body {
+    display: flex;
+    align-items: flex-start;
+    min-height: calc(100vh - 54px);
+  }
+
+  /* ── ZONE SIDEBAR ────────────────────────────────────────── */
+  .zone-sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    position: sticky;
+    top: 54px;
+    height: calc(100vh - 54px);
+    overflow-y: auto;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: none; /* hidden until routes loaded */
+    flex-direction: column;
+  }
+  .zone-sidebar.visible { display: flex; }
+
+  .zone-sidebar::-webkit-scrollbar { width: 4px; }
+  .zone-sidebar::-webkit-scrollbar-track { background: transparent; }
+  .zone-sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+  .zsb-header {
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 2;
+  }
+  .zsb-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .zsb-search {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text);
+    background: var(--surface2);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .zsb-search:focus { border-color: var(--accent); background: var(--surface); }
+
+  .zone-list { padding: 6px 8px 12px; }
+
+  .zone-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-bottom: 1px;
+    gap: 6px;
+  }
+  .zone-item:hover { background: var(--surface2); }
+  .zone-item.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+  .zone-item.active .zi-name { color: var(--accent); font-weight: 600; }
+  .zone-item.active .zi-count { background: var(--accent); color: white; }
+
+  .zi-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .zi-name {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+  }
+  .zi-count {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 2px 6px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    min-width: 22px;
+    text-align: center;
+  }
+
+  .zone-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 6px 8px;
+  }
+
+  /* "All Zones" special item */
+  .zone-item.all-zones-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .zone-item.all-zones-item .zi-name { font-weight: 600; color: var(--text); }
+  .zone-item.all-zones-item.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .zone-item.all-zones-item.active .zi-name { color: white; }
+  .zone-item.all-zones-item.active .zi-count { background: rgba(255,255,255,0.25); color: white; border-color: transparent; }
+
+  /* ── MAIN CONTENT ────────────────────────────────────────── */
+  .main-content {
+    flex: 1;
+    min-width: 0;
+  }
 
   /* ── CONTAINER ──────────────────────────────────────────── */
   .container { max-width: 1560px; margin: 0 auto; padding: 16px; }
@@ -185,11 +317,37 @@
   .stat-info .value { font-size: 24px; font-weight: 600; font-family: var(--mono); color: var(--text); line-height: 1; }
   .stat-info .sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 
-  /* ── MAIN VIEW LAYOUT ───────────────────────────────────── */
-  /* Card grid view (default) */
-  #cardView {
+  /* ── ZONE FILTER BANNER ─────────────────────────────────── */
+  .zone-filter-banner {
     display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    background: var(--accent-light);
+    border: 1px solid rgba(26,107,60,0.2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--accent);
   }
+  .zone-filter-banner.show { display: flex; }
+  .zone-filter-banner strong { font-weight: 600; }
+  .zfb-clear {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: none;
+    border: 1px solid rgba(26,107,60,0.3);
+    border-radius: 20px;
+    padding: 3px 12px;
+    color: var(--accent);
+    transition: all 0.15s;
+  }
+  .zfb-clear:hover { background: rgba(26,107,60,0.1); }
+
+  /* ── MAIN VIEW LAYOUT ───────────────────────────────────── */
+  #cardView { display: none; }
   .view-header {
     display: flex;
     align-items: center;
@@ -357,71 +515,39 @@
   }
   @media (max-width: 1100px) { .detail-layout { grid-template-columns: 1fr; } }
 
-  /* ── MOBILE RESPONSIVE ─────────────────────────────────────── */
+  /* ── MOBILE RESPONSIVE ─────────────────────────────────── */
+  @media (max-width: 860px) {
+    .zone-sidebar { display: none !important; }
+    .zone-sidebar.mobile-open {
+      display: flex !important;
+      position: fixed;
+      left: 0; top: 54px;
+      z-index: 900;
+      height: calc(100vh - 54px);
+      box-shadow: var(--shadow-lg);
+    }
+    .zsb-mobile-toggle { display: flex !important; }
+    .main-content { width: 100%; }
+  }
+
   @media (max-width: 640px) {
     header { height: 50px; padding: 0 12px; gap: 8px; }
     header h1 { font-size: 13px; }
     .logo-mark { width: 26px; height: 26px; border-radius: 6px; }
     .date-chip { font-size: 10px; padding: 3px 8px; }
-    .back-btn { font-size: 12px; padding: 4px 10px; }
-
     .container { padding: 12px; }
-
-    .upload-zone { padding: 28px 16px; margin-bottom: 12px; }
-    .upload-zone h2 { font-size: 15px; }
-    .upload-zone p { font-size: 12px; }
-    .upload-icon { width: 44px; height: 44px; border-radius: 11px; margin-bottom: 12px; }
-
     .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
     .stat-card { padding: 10px 12px; gap: 8px; }
     .stat-icon { width: 32px; height: 32px; border-radius: 8px; }
-    .stat-icon svg { width: 15px; height: 15px; }
     .stat-info .value { font-size: 20px; }
-    .stat-info .label { font-size: 10px; }
-    .stat-info .sub { font-size: 10px; }
-
     .route-grid { grid-template-columns: 1fr; gap: 10px; }
-    .rc-header { padding: 11px 13px; gap: 8px; }
-    .rc-body { padding: 11px 13px; }
-    .rc-footer { padding: 8px 13px; }
-    .rc-footer-txt { display: none; }
-
     .detail-sidebar { position: static; }
     #map { height: 300px; }
-    .map-legend { padding: 10px 14px; }
-    .legend-items { gap: 8px; }
-
-    .table-section { margin-top: 14px; }
-    .section-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .export-btn { width: 100%; justify-content: center; }
-
-    /* Hide less critical table columns on small screens */
-    table th:nth-child(6),
-    table td:nth-child(6) { display: none; }
-
+    table th:nth-child(6), table td:nth-child(6) { display: none; }
     td { padding: 8px 10px; font-size: 11px; }
     th { padding: 8px 10px; }
-
-    .empty { padding: 48px 16px; }
-    .empty-icon { width: 56px; height: 56px; border-radius: 14px; }
-    .empty-icon svg { width: 26px; height: 26px; }
-    .empty h3 { font-size: 14px; }
-    .empty p { font-size: 12px; }
-
-    .detail-sidebar-header { padding: 14px 15px; }
-    .ds-zone { font-size: 14px; }
-    .stops-list { max-height: 280px; }
-    .stop-item { padding: 9px 14px; }
-    .dispatch-row { padding: 10px 14px; flex-wrap: wrap; gap: 6px; }
-    .dispatch-row .dr-travel { order: 3; width: 100%; }
-  }
-
-  @media (max-width: 400px) {
-    .stats-bar { grid-template-columns: repeat(2, 1fr); }
-    .stat-info .value { font-size: 18px; }
-    /* Hide travel time col too on very small screens */
-    table th:nth-child(5),
-    table td:nth-child(5) { display: none; }
+    .header-btn span { display: none; }
+    .header-btn { padding: 5px 8px; }
   }
 
   /* Detail sidebar */
@@ -520,10 +646,6 @@
   }
   .stop-name { flex: 1; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .stop-weight { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
-  .stop-connector {
-    position: relative;
-    padding-left: 18px;
-  }
 
   /* Map panel */
   .map-panel { display: flex; flex-direction: column; gap: 14px; }
@@ -582,7 +704,6 @@
     letter-spacing: 0.3px;
   }
   .export-btn:hover { background: #155c32; box-shadow: var(--shadow-sm); }
-  .export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .export-btn svg { width: 14px; height: 14px; stroke: white; fill: none; stroke-width: 2; }
 
   .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
@@ -646,18 +767,25 @@
   .empty h3 { font-size: 16px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
   .empty p { font-size: 13px; line-height: 1.7; max-width: 400px; margin: 0 auto; }
 
+  /* No-routes-in-zone state */
+  .empty-zone {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-muted);
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .empty-zone h3 { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .empty-zone p { font-size: 13px; }
+
   /* Animations */
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
   }
   .route-card { animation: fadeIn 0.25s ease both; }
-  .route-card:nth-child(1) { animation-delay: 0.02s; }
-  .route-card:nth-child(2) { animation-delay: 0.04s; }
-  .route-card:nth-child(3) { animation-delay: 0.06s; }
-  .route-card:nth-child(4) { animation-delay: 0.08s; }
-  .route-card:nth-child(5) { animation-delay: 0.10s; }
-  .route-card:nth-child(6) { animation-delay: 0.12s; }
 
   /* ── HEADER BUTTONS ─────────────────────────────────────── */
   .header-btn {
@@ -674,10 +802,8 @@
   .header-btn.primary:hover { background: #155c32; }
   .header-btn.primary svg { stroke: white; }
 
-  /* ── DROPPED WEIGHT STAT ────────────────────────────────── */
-  .stat-card.danger { border-color: rgba(176,48,48,0.3); background: var(--danger-light); }
-  .stat-card.danger .stat-info .value { color: var(--danger); }
-  .stat-card.danger .stat-info .label { color: var(--danger); }
+  /* Mobile sidebar toggle – hidden on desktop */
+  .zsb-mobile-toggle { display: none; }
 
   /* ── MODAL OVERLAY ──────────────────────────────────────── */
   .modal-overlay {
@@ -727,7 +853,6 @@
   .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239A9590' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
 
   /* ── CUSTOMER LIST ──────────────────────────────────────── */
-  .cust-search { margin-bottom: 14px; }
   .cust-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
   .cust-row {
     display: flex; align-items: center; gap: 10px;
@@ -749,7 +874,6 @@
   .cust-btn.del { color: var(--danger); border-color: rgba(176,48,48,0.2); }
   .cust-btn.del:hover { background: var(--danger-light); }
 
-  /* ── VEHICLE OVERRIDE on route card ────────────────────── */
   .vehicle-override {
     font-size: 11px; padding: 2px 6px; border-radius: 4px;
     border: 1px solid var(--border); background: var(--surface);
@@ -767,7 +891,6 @@
     align-items: center; gap: 10px;
   }
   .saved-banner.show { display: flex; }
-  .saved-banner strong { font-weight: 600; }
   .saved-banner .sb-actions { margin-left: auto; display: flex; gap: 8px; }
   .saved-banner .sb-btn {
     font-size: 12px; font-weight: 500; cursor: pointer;
@@ -811,8 +934,6 @@
   @media (max-width: 640px) {
     .form-grid { grid-template-columns: 1fr; }
     .modal { max-height: 95vh; }
-    .header-btn span { display: none; }
-    .header-btn { padding: 5px 8px; }
   }
 </style>
 </head>
@@ -827,6 +948,11 @@
   <button class="back-btn" id="backBtn" onclick="showCardView()">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     All Routes
+  </button>
+  <!-- Mobile sidebar toggle -->
+  <button class="header-btn zsb-mobile-toggle" id="mobileSidebarToggle" onclick="toggleMobileSidebar()" style="display:none" title="Filter by zone">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="16" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/></svg>
+    <span>Zones</span>
   </button>
   <button class="header-btn" id="orsBtn" onclick="openOrsModal()" title="OpenRouteService settings">
     <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -844,7 +970,7 @@
 </header>
 
 <!-- ── SAVED ROUTES BANNER ──────────────────────────────────────── -->
-<div class="saved-banner" id="savedBanner">
+<div class="saved-banner" id="savedBanner" style="margin:12px 16px 0">
   <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:2;flex-shrink:0"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg>
   <span><strong id="savedBannerText">Routes saved.</strong> Reload last session?</span>
   <div class="sb-actions">
@@ -864,28 +990,18 @@
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
       <span class="modal-title">OpenRouteService Settings</span>
-      <button class="modal-close" onclick="closeOrsModal()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <button class="modal-close" onclick="closeOrsModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="form-group full" style="margin-bottom:16px">
         <label class="form-label">API Key</label>
         <div class="ors-input-row">
-          <input class="form-input" id="orsKeyInput" type="password"
-            placeholder="Paste your ORS key here…" autocomplete="off"
-            oninput="onOrsKeyChange()">
+          <input class="form-input" id="orsKeyInput" type="password" placeholder="Paste your ORS key here…" autocomplete="off" oninput="onOrsKeyChange()">
           <button class="header-btn primary" onclick="testOrsKey()" id="orsTestBtn">Test</button>
         </div>
         <div class="ors-badge idle" id="orsBadge">⬤ Not tested</div>
-        <p class="ors-note">
-          Get a free key at <strong>openrouteservice.org → Dashboard → API Keys</strong>.<br>
-          Free tier: 2,000 direction requests/day. With a valid key the tool fetches
-          real road distances (HGV profile) for every route — making dispatch times
-          significantly more accurate. Without a key it uses straight-line × 1.35.
-        </p>
+        <p class="ors-note">Get a free key at <strong>openrouteservice.org → Dashboard → API Keys</strong>.<br>Free tier: 2,000 direction requests/day. With a valid key the tool fetches real road distances (HGV profile) for every route — making dispatch times significantly more accurate. Without a key it uses straight-line × 1.35.</p>
       </div>
-
       <div class="form-group full" style="margin-bottom:16px">
         <label class="form-label">Mode</label>
         <select class="form-input form-select" id="orsModeSelect">
@@ -893,17 +1009,10 @@
           <option value="per_route">Per route — one ORS call per route (recommended)</option>
           <option value="per_stop">Per stop — ORS matrix for all stops (most accurate, slower)</option>
         </select>
-        <p class="ors-note" style="margin-top:6px">
-          <em>Per route</em> calls ORS once per generated route to get total km + drive time.<br>
-          <em>Per stop</em> calls the ORS Distance Matrix API to get real inter-stop distances
-          before clustering — best results but uses more API quota.
-        </p>
       </div>
-
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;color:var(--text-secondary)">
         <strong style="color:var(--text)">How it works</strong><br>
-        Your key is only sent directly to <code style="font-family:var(--mono);font-size:11px">api.openrouteservice.org</code>
-        from your browser. <strong style="color:var(--warn)">It is saved in your browser's localStorage</strong> so it persists across sessions — clear your browser data if you want to remove it. Route results are cached per session to avoid repeat calls.
+        Your key is only sent directly to <code style="font-family:var(--mono);font-size:11px">api.openrouteservice.org</code> from your browser. <strong style="color:var(--warn)">It is saved in your browser's localStorage</strong> so it persists across sessions.
       </div>
     </div>
     <div class="modal-footer">
@@ -918,9 +1027,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title">Manage Customers</span>
-      <button class="modal-close" onclick="closeCustomerModal()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <button class="modal-close" onclick="closeCustomerModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body">
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
@@ -940,9 +1047,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title" id="addCustTitle">Add Customer</span>
-      <button class="modal-close" onclick="closeAddCustomer()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <button class="modal-close" onclick="closeAddCustomer()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
@@ -986,151 +1091,177 @@
   </div>
 </div>
 
-<div class="container">
+<!-- ── APP BODY ───────────────────────────────────────────────────── -->
+<div class="app-body">
 
-  <!-- Upload -->
-  <div class="upload-zone" id="uploadZone">
-    <input type="file" id="fileInput" accept=".xlsx,.xls">
-    <div class="upload-icon">
-      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  <!-- Zone Sidebar -->
+  <nav class="zone-sidebar" id="zoneSidebar" aria-label="Filter by zone">
+    <div class="zsb-header">
+      <div class="zsb-title">Filter by Zone</div>
+      <input class="zsb-search" id="zsbSearch" placeholder="Search zones…" oninput="filterZoneSidebar()" autocomplete="off">
     </div>
-    <h2>Upload Today's Order Sheet</h2>
-    <p>Drop your Excel file here or click to browse</p>
-    <span class="hint">Columns: Customer Name / Delivered To &nbsp;+&nbsp; Weight (kg)</span>
-  </div>
+    <div class="zone-list" id="zoneList"></div>
+  </nav>
 
-  <!-- Removed notice -->
-  <div class="removed-notice" id="removedNotice">
-    <strong>⚠ Customers removed — no coordinates in master database:</strong>
-    <div id="removedList"></div>
-  </div>
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="container">
 
-  <!-- Stats -->
-  <div class="stats-bar" id="statsBar" style="display:none">
-    <div class="stat-card">
-      <div class="stat-icon si-green">
-        <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="2"/></svg>
-      </div>
-      <div class="stat-info">
-        <div class="label">Total Orders</div>
-        <div class="value" id="statOrders">0</div>
-        <div class="sub">customers today</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-blue">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      </div>
-      <div class="stat-info">
-        <div class="label">Routes</div>
-        <div class="value" id="statRoutes">0</div>
-        <div class="sub">delivery routes</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-orange">
-        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-      </div>
-      <div class="stat-info">
-        <div class="label">Total Weight</div>
-        <div class="value" id="statWeight">0</div>
-        <div class="sub">kg dispatching</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-purple">
-        <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-      </div>
-      <div class="stat-info">
-        <div class="label">Vehicles</div>
-        <div class="value" id="statVehicles">0</div>
-        <div class="sub">deployed today</div>
-      </div>
-    </div>
-    <div class="stat-card" id="droppedCard" style="display:none">
-      <div class="stat-icon" style="background:var(--danger-light)">
-        <svg viewBox="0 0 24 24" style="stroke:var(--danger);fill:none;stroke-width:1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      </div>
-      <div class="stat-info">
-        <div class="label" style="color:var(--danger)">Dropped Weight</div>
-        <div class="value" id="statDropped" style="color:var(--danger)">0</div>
-        <div class="sub" id="statDroppedSub">kg not routed</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Empty state -->
-  <div class="empty" id="emptyState">
-    <div class="empty-icon">
-      <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-    </div>
-    <h3>Upload an order sheet to begin</h3>
-    <p>The tool will automatically match customers, group routes by zone & ETA, sequence stops, and calculate dispatch times.</p>
-  </div>
-
-  <!-- Card Grid View -->
-  <div id="cardView">
-    <div class="view-header">
-      <span class="view-title">Routes Overview</span>
-      <span class="view-count" id="routeCount">0 routes</span>
-    </div>
-    <div class="route-grid" id="routeGrid"></div>
-
-    <!-- Full table below cards -->
-    <div class="table-section">
-      <div class="section-header">
-        <span class="section-title">All Stops — Full Dispatch Table</span>
-        <button class="export-btn" onclick="exportExcel()">
-          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export Excel
-        </button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Route #</th><th>Drop Seq</th><th>Delivered To</th>
-              <th>Weight (kg)</th><th>Vehicle</th><th>Travel Time</th><th>Dispatch Time</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Detail View (single route) -->
-  <div id="detailView">
-    <div class="detail-layout">
-      <div class="detail-sidebar" id="detailSidebar">
-        <!-- filled by JS -->
-      </div>
-      <div class="map-panel">
-        <div class="map-wrap">
-          <div id="map"></div>
+      <!-- Upload -->
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </div>
-        <div class="map-legend" id="mapLegend">
-          <div class="legend-title">Map Legend</div>
-          <div class="legend-items">
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#1A6B3C;border:2px solid white;box-shadow:0 0 0 1px #1A6B3C"></div>
-              <span>Warehouse</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-line" id="legendLine" style="background:#1A6B3C"></div>
-              <span>Route Path</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot" id="legendDot" style="background:#1A6B3C"></div>
-              <span>Drop Locations (numbered in sequence)</span>
+        <h2>Upload Today's Order Sheet</h2>
+        <p>Drop your Excel file here or click to browse</p>
+        <span class="hint">Columns: Customer Name / Delivered To &nbsp;+&nbsp; Weight (kg)</span>
+      </div>
+
+      <!-- Removed notice -->
+      <div class="removed-notice" id="removedNotice">
+        <strong>⚠ Customers removed — no coordinates in master database:</strong>
+        <div id="removedList"></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar" id="statsBar" style="display:none">
+        <div class="stat-card">
+          <div class="stat-icon si-green">
+            <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="2"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="label">Total Orders</div>
+            <div class="value" id="statOrders">0</div>
+            <div class="sub">customers today</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-blue">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="label">Routes</div>
+            <div class="value" id="statRoutes">0</div>
+            <div class="sub">delivery routes</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-orange">
+            <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="label">Total Weight</div>
+            <div class="value" id="statWeight">0</div>
+            <div class="sub">kg dispatching</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-purple">
+            <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="label">Vehicles</div>
+            <div class="value" id="statVehicles">0</div>
+            <div class="sub">deployed today</div>
+          </div>
+        </div>
+        <div class="stat-card" id="droppedCard" style="display:none">
+          <div class="stat-icon" style="background:var(--danger-light)">
+            <svg viewBox="0 0 24 24" style="stroke:var(--danger);fill:none;stroke-width:1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="label" style="color:var(--danger)">Dropped Weight</div>
+            <div class="value" id="statDropped" style="color:var(--danger)">0</div>
+            <div class="sub" id="statDroppedSub">kg not routed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        </div>
+        <h3>Upload an order sheet to begin</h3>
+        <p>The tool will automatically match customers, group routes by zone & ETA, sequence stops, and calculate dispatch times.</p>
+      </div>
+
+      <!-- Card Grid View -->
+      <div id="cardView">
+        <!-- Zone filter banner -->
+        <div class="zone-filter-banner" id="zoneFilterBanner">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--accent);fill:none;stroke-width:2;flex-shrink:0"><polygon points="3 6 10 6 10 14 14 14 14 6 21 6 12 2 3 6"/><line x1="12" y1="14" x2="12" y2="22"/></svg>
+          <span>Showing zone: <strong id="zoneFilterLabel">—</strong></span>
+          <button class="zfb-clear" onclick="setActiveZone('__ALL__')">Show all zones</button>
+        </div>
+
+        <div class="view-header">
+          <span class="view-title" id="viewTitleLabel">Routes Overview</span>
+          <span class="view-count" id="routeCount">0 routes</span>
+        </div>
+
+        <!-- Empty zone state -->
+        <div class="empty-zone" id="emptyZoneState">
+          <h3>No routes in this zone</h3>
+          <p>Try selecting a different zone or upload a new order sheet.</p>
+        </div>
+
+        <div class="route-grid" id="routeGrid"></div>
+
+        <!-- Full table below cards -->
+        <div class="table-section" id="tableSection">
+          <div class="section-header">
+            <span class="section-title">All Stops — Full Dispatch Table</span>
+            <button class="export-btn" onclick="exportExcel()">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Excel
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Route #</th><th>Drop Seq</th><th>Delivered To</th>
+                  <th>Weight (kg)</th><th>Vehicle</th><th>Travel Time</th><th>Dispatch Time</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail View (single route) -->
+      <div id="detailView">
+        <div class="detail-layout">
+          <div class="detail-sidebar" id="detailSidebar"></div>
+          <div class="map-panel">
+            <div class="map-wrap"><div id="map"></div></div>
+            <div class="map-legend" id="mapLegend">
+              <div class="legend-title">Map Legend</div>
+              <div class="legend-items">
+                <div class="legend-item">
+                  <div class="legend-dot" style="background:#1A6B3C;border:2px solid white;box-shadow:0 0 0 1px #1A6B3C"></div>
+                  <span>Warehouse</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-line" id="legendLine" style="background:#1A6B3C"></div>
+                  <span>Route Path</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-dot" id="legendDot" style="background:#1A6B3C"></div>
+                  <span>Drop Locations (numbered in sequence)</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-</div><!-- /container -->
+    </div><!-- /container -->
+  </div><!-- /main-content -->
+</div><!-- /app-body -->
 
 <script>
 // ─── MASTER DATABASE ────────────────────────────────────────────────────────
@@ -1151,38 +1282,32 @@ const VEHICLE_CAPS = [
   { name: 'Multi Vehicle', max: Infinity },
 ];
 
-// Route colors (professional palette)
 const ROUTE_COLORS = ['#1A6B3C','#1A4F8A','#A85C00','#5B3FA6','#B03030','#155e5e','#7B4F2E','#3A6B8A','#6B3A6B','#4A6B1A','#8A3A1A','#1A6B5A'];
 
 let allRoutes = [];
 let map = null;
 let mapLayers = [];
 let activeRouteIdx = null;
+let activeZone = '__ALL__'; // zone filter state
 
 // ─── ORS STATE ───────────────────────────────────────────────────────────────
 let orsKey = '';
-let orsMode = 'off';      // 'off' | 'per_route' | 'per_stop'
+let orsMode = 'off';
 let orsKeyValid = false;
-const orsCache = {};      // cacheKey → { km, mins }
+const orsCache = {};
 
 function getOrsKey() { return (document.getElementById('orsKeyInput')?.value || orsKey || '').trim(); }
 
-// ─── ORS MODAL ────────────────────────────────────────────────────────────────
 function openOrsModal() {
   document.getElementById('orsKeyInput').value = orsKey;
   document.getElementById('orsModeSelect').value = orsMode;
   document.getElementById('orsModal').classList.add('open');
 }
 function closeOrsModal() { document.getElementById('orsModal').classList.remove('open'); }
-
 function onOrsKeyChange() {
-  // Reset badge when key is edited
   const badge = document.getElementById('orsBadge');
-  badge.className = 'ors-badge idle';
-  badge.textContent = '⬤ Not tested';
-  orsKeyValid = false;
+  badge.className = 'ors-badge idle'; badge.textContent = '⬤ Not tested'; orsKeyValid = false;
 }
-
 async function testOrsKey() {
   const key = getOrsKey();
   const badge = document.getElementById('orsBadge');
@@ -1201,14 +1326,7 @@ async function testOrsKey() {
   }
   btn.textContent = 'Test'; btn.disabled = false;
 }
-
-function saveOrsSettings() {
-  orsKey  = getOrsKey();
-  orsMode = document.getElementById('orsModeSelect').value;
-  updateOrsBtnLabel();
-  closeOrsModal();
-}
-
+function saveOrsSettings() { orsKey = getOrsKey(); orsMode = document.getElementById('orsModeSelect').value; updateOrsBtnLabel(); closeOrsModal(); }
 function clearOrsKey() {
   orsKey = ''; orsKeyValid = false; orsMode = 'off';
   document.getElementById('orsKeyInput').value = '';
@@ -1217,7 +1335,6 @@ function clearOrsKey() {
   document.getElementById('orsBadge').textContent = '⬤ Not tested';
   updateOrsBtnLabel();
 }
-
 function updateOrsBtnLabel() {
   const lbl = document.getElementById('orsBtnLabel');
   if (!lbl) return;
@@ -1225,21 +1342,17 @@ function updateOrsBtnLabel() {
   else { lbl.textContent = 'ORS: On'; document.getElementById('orsBtn').style.color='var(--accent)'; }
 }
 
-// ─── LOADING OVERLAY ─────────────────────────────────────────────────────────
 function setLoading(show, msg='Fetching road distances…') {
-  const el = document.getElementById('loadingOverlay');
   document.getElementById('loadingText').textContent = msg;
-  el.classList.toggle('show', show);
+  document.getElementById('loadingOverlay').classList.toggle('show', show);
 }
 
-// ─── ROAD DISTANCE (ORS or haversine fallback) ────────────────────────────────
-// waypoints: [{lat,lng}, …]  returns {km, mins}
 async function getRoadDistance(waypoints) {
   if (!orsKey || orsMode === 'off') return haversineDist(waypoints);
   const ck = waypoints.map(w=>`${w.lat.toFixed(4)},${w.lng.toFixed(4)}`).join('|');
   if (orsCache[ck]) return orsCache[ck];
   try {
-    const coords = waypoints.map(w => [w.lng, w.lat]); // ORS = [lon, lat]
+    const coords = waypoints.map(w => [w.lng, w.lat]);
     const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/json', {
       method: 'POST',
       headers: { 'Authorization': orsKey, 'Content-Type': 'application/json' },
@@ -1248,23 +1361,16 @@ async function getRoadDistance(waypoints) {
     if (!r.ok) throw new Error(`ORS ${r.status}`);
     const d = await r.json();
     const route = d.routes?.[0];
-    if (!route) throw new Error('no route in response');
+    if (!route) throw new Error('no route');
     const s = route.summary;
-    // Decode geometry — ORS returns encoded polyline
     let geometry = null;
-    if (route.geometry) {
-      geometry = decodePolyline(route.geometry);
-    }
+    if (route.geometry) geometry = decodePolyline(route.geometry);
     const result = { km: s.distance, mins: s.duration / 60, geometry };
     orsCache[ck] = result;
     return result;
-  } catch(e) {
-    console.warn('ORS directions failed, using haversine fallback:', e.message);
-    return haversineDist(waypoints);
-  }
+  } catch(e) { return haversineDist(waypoints); }
 }
 
-// Decode Google/ORS encoded polyline to [[lat,lng], ...]
 function decodePolyline(encoded) {
   const coords = [];
   let index = 0, lat = 0, lng = 0;
@@ -1280,8 +1386,6 @@ function decodePolyline(encoded) {
   return coords;
 }
 
-// ORS Distance Matrix for stop-to-stop distances (per_stop mode)
-// Returns a 2D array of distances in km, or null on failure
 async function getOrsMatrix(points) {
   if (!orsKey) return null;
   try {
@@ -1293,40 +1397,27 @@ async function getOrsMatrix(points) {
     });
     if (!r.ok) throw new Error(`ORS matrix ${r.status}`);
     const d = await r.json();
-    return d.distances; // n×n matrix in km
-  } catch(e) {
-    console.warn('ORS matrix failed:', e.message);
-    return null;
-  }
+    return d.distances;
+  } catch(e) { return null; }
 }
 
 function haversineDist(waypoints) {
   let km = 0;
   for (let i = 1; i < waypoints.length; i++)
     km += haversine(waypoints[i-1].lat, waypoints[i-1].lng, waypoints[i].lat, waypoints[i].lng) * 1.35;
-  const mins = (km / AVG_SPEED_KMH) * 60;
-  return { km, mins };
+  return { km, mins: (km / AVG_SPEED_KMH) * 60 };
 }
 
-// ─── UTILITIES ───────────────────────────────────────────────────────────────
 function normalise(s) { return (s||'').toLowerCase().replace(/[^a-z0-9]/g,'').trim(); }
-
 function haversine(lat1,lng1,lat2,lng2) {
   const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-
-function vehicleForWeight(kg) { for(const v of VEHICLE_CAPS) if(kg<=v.max) return v.name; return 'Multi Vehicle'; }
-
 function vehicleClass(v) {
-  if(v==='2W') return 'v-2w';
-  if(v==='Tata Ace') return 'v-tata';
-  if(v==='Bolero Pickup') return 'v-bolero';
-  if(v==='Eicher 14 ft') return 'v-eicher';
-  return 'v-multi';
+  if(v==='2W') return 'v-2w'; if(v==='Tata Ace') return 'v-tata';
+  if(v==='Bolero Pickup') return 'v-bolero'; if(v==='Eicher 14 ft') return 'v-eicher'; return 'v-multi';
 }
-
 function dispatchTime(etaStr, routeKm) {
   if(!etaStr||etaStr==='As per customer') return '05:00';
   const [hh,mm]=etaStr.split(':').map(Number);
@@ -1335,8 +1426,6 @@ function dispatchTime(etaStr, routeKm) {
   const dh=Math.floor(dispH), dm=Math.round((dispH-dh)*60);
   return `${String(dh).padStart(2,'0')}:${String(dm).padStart(2,'0')}`;
 }
-
-// Updated to use real drive time if available
 function dispatchTimeFromMins(etaStr, travelMins) {
   if(!etaStr||etaStr==='As per customer') return '05:00';
   const [hh,mm]=etaStr.split(':').map(Number);
@@ -1345,15 +1434,12 @@ function dispatchTimeFromMins(etaStr, travelMins) {
   const dh=Math.floor(dispH), dm=Math.round((dispH-dh)*60);
   return `${String(dh).padStart(2,'0')}:${String(dm).padStart(2,'0')}`;
 }
-
 function travelTimeStr(km, mins) {
-  // Use real ORS mins if provided, otherwise estimate from km
   const h = mins != null ? mins/60 : km/AVG_SPEED_KMH;
   const hh=Math.floor(h), mm=Math.round((h-hh)*60);
   return `${hh}h ${mm}m`;
 }
 
-// ─── MATCHING & ROUTING ───────────────────────────────────────────────────────
 function matchToMaster(deliveredTo) {
   const key=normalise(deliveredTo);
   if(masterMap.has(key)) return masterMap.get(key);
@@ -1367,29 +1453,16 @@ function matchToMaster(deliveredTo) {
   return best;
 }
 
-// nearestNeighbour — optionally uses ORS distance matrix (per_stop mode)
 async function nearestNeighbour(stops, distMatrix) {
   if(stops.length<=1) return stops;
   const unvisited=[...stops], route=[];
-  let curIdx = -1; // -1 = warehouse
-
+  let curIdx = -1;
   while(unvisited.length) {
     let minD=Infinity, minI=0;
     unvisited.forEach((s,i)=>{
-      let d;
-      if(distMatrix && curIdx >= 0) {
-        // use real road distance from matrix if available
-        const origIdx = stops.indexOf(unvisited[i] === s ? s : null);
-        d = distMatrix[curIdx]?.[stops.indexOf(s)] ?? haversine(
-          curIdx<0?WAREHOUSE.lat:stops[curIdx].lat,
-          curIdx<0?WAREHOUSE.lng:stops[curIdx].lng,
-          s.lat, s.lng
-        );
-      } else {
-        const prevLat = curIdx<0 ? WAREHOUSE.lat : route[route.length-1].lat;
-        const prevLng = curIdx<0 ? WAREHOUSE.lng : route[route.length-1].lng;
-        d = haversine(prevLat, prevLng, s.lat, s.lng);
-      }
+      const prevLat = curIdx<0 ? WAREHOUSE.lat : route[route.length-1].lat;
+      const prevLng = curIdx<0 ? WAREHOUSE.lng : route[route.length-1].lng;
+      const d = haversine(prevLat, prevLng, s.lat, s.lng);
       if(d<minD){minD=d;minI=i;}
     });
     const chosen = unvisited[minI];
@@ -1400,7 +1473,6 @@ async function nearestNeighbour(stops, distMatrix) {
   return route;
 }
 
-// routeKm — straight-line only (used for initial bucketing before ORS enrichment)
 function routeKm(stops) {
   let total=0, prev=WAREHOUSE;
   for(const s of stops) { total+=haversine(prev.lat,prev.lng,s.lat,s.lng); prev=s; }
@@ -1417,10 +1489,9 @@ function processFile(file) {
   reader.readAsBinaryString(file);
 }
 
-// ─── ROUTING CONFIG ──────────────────────────────────────────────────────────
-const DISPATCH_WINDOW_H = 1.5;   // 90-min window: stops departing within 90 mins share a vehicle
-const VEHICLE_FILL_TARGET = 0.75; // aim to fill vehicles to at least 75% before closing a route
-const MAX_ROUTE_KM = 120;         // don't let a single route exceed 120 km total
+const DISPATCH_WINDOW_H = 1.5;
+const VEHICLE_FILL_TARGET = 0.75;
+const MAX_ROUTE_KM = 120;
 
 function etaToHours(etaStr) {
   if(!etaStr || etaStr==='As per customer' || etaStr==='none' || etaStr==='') return null;
@@ -1431,24 +1502,16 @@ function etaToHours(etaStr) {
 function dispatchHours(etaStr, estKm) {
   const etaH = etaToHours(etaStr);
   if(etaH===null) return MIN_DISPATCH_H;
-  const travelH = estKm / AVG_SPEED_KMH;
-  const d = etaH - travelH;
+  const d = etaH - estKm / AVG_SPEED_KMH;
   return d < MIN_DISPATCH_H ? MIN_DISPATCH_H : d;
 }
 
-// Pick the best vehicle for a given weight, preferring a fuller larger vehicle
-// over a lighter smaller one when the fill ratio of the larger is better.
 function bestVehicle(kg) {
-  // Find smallest vehicle that fits
   const fitting = VEHICLE_CAPS.filter(v => kg <= v.max);
   if(!fitting.length) return VEHICLE_CAPS[VEHICLE_CAPS.length-1];
-
-  // Among fitting vehicles, prefer the one where fill% >= VEHICLE_FILL_TARGET.
-  // If multiple qualify, pick the largest (fewer vehicles on road).
-  // If none reach the target, just pick the smallest fitting (can't do better).
   const wellFilled = fitting.filter(v => v.max !== Infinity && (kg / v.max) >= VEHICLE_FILL_TARGET);
-  if(wellFilled.length) return wellFilled[wellFilled.length-1]; // largest well-filled
-  return fitting[0]; // smallest fitting as fallback
+  if(wellFilled.length) return wellFilled[wellFilled.length-1];
+  return fitting[0];
 }
 
 async function buildRoutes(rows) {
@@ -1473,42 +1536,29 @@ async function buildRoutes(rows) {
     document.getElementById('removedList').innerHTML=`<div style="margin-bottom:6px;font-weight:600">${totalDrop} kg total dropped</div>`+removed.map(r=>`<div style="margin-top:3px">• ${r.name}${r.weight?` — ${r.weight}kg`:''}</div>`).join('');
   } else notice.style.display='none';
 
-  // Step 1: Group by zone
   const byZone={};
   matched.forEach(s=>{ if(!byZone[s.zone]) byZone[s.zone]=[]; byZone[s.zone].push(s); });
 
-  // Step 2: Group by ETA hour within each zone — different ETA hours always = different route
-  // A 10:00 and 12:00 delivery in same zone must NEVER share a vehicle
   let routeNum=1; allRoutes=[];
   Object.entries(byZone).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([zone, stops])=>{
-    // Group strictly by ETA hour
     const etaGroups = {};
-    stops.forEach(s => {
-      const etaKey = s.eta || 'none';
-      if (!etaGroups[etaKey]) etaGroups[etaKey] = [];
-      etaGroups[etaKey].push(s);
-    });
+    stops.forEach(s => { const etaKey = s.eta || 'none'; if (!etaGroups[etaKey]) etaGroups[etaKey] = []; etaGroups[etaKey].push(s); });
 
-    // Convert each ETA group into pools (for vehicle capacity splitting within same ETA)
     const pools = [];
     Object.entries(etaGroups).sort((a,b) => (etaToHours(a[0])||99) - (etaToHours(b[0])||99)).forEach(([etaKey, etaStops]) => {
-      const bindingEtaH = etaToHours(etaKey);
-      // Single pool per ETA group — vehicle bucketing handles splits below
-      pools.push({ stops: etaStops, dispHStart: etaToHours(etaKey)||MIN_DISPATCH_H, bindingEta: etaKey, bindingEtaH });
+      pools.push({ stops: etaStops, bindingEta: etaKey, bindingEtaH: etaToHours(etaKey) });
     });
 
-    // Step 3: Fill vehicles per pool
     pools.forEach(pool=>{
       const poolStops = [...pool.stops].sort((a,b)=>
-        haversine(WAREHOUSE.lat,WAREHOUSE.lng,a.lat,a.lng) -
-        haversine(WAREHOUSE.lat,WAREHOUSE.lng,b.lat,b.lng)
+        haversine(WAREHOUSE.lat,WAREHOUSE.lng,a.lat,a.lng) - haversine(WAREHOUSE.lat,WAREHOUSE.lng,b.lat,b.lng)
       );
       const maxFiniteCap = Math.max(...VEHICLE_CAPS.filter(v=>v.max!==Infinity).map(v=>v.max));
       let bucket=[], bucketWeight=0, bucketBindEta=pool.bindingEta, bucketBindEtaH=pool.bindingEtaH;
 
       const flushBucket = () => {
         if(!bucket.length) return;
-        const km=routeKm(bucket); // haversine estimate — ORS will override later
+        const km=routeKm(bucket);
         const totalWeight=bucket.reduce((s,x)=>s+x.weight,0);
         const vehicle=bestVehicle(totalWeight);
         const dispatch=dispatchTime(bucketBindEta, km);
@@ -1517,68 +1567,44 @@ async function buildRoutes(rows) {
         const utilPct = vehicle.max !== Infinity ? Math.round((totalWeight/vehicle.max)*100) : null;
         allRoutes.push({
           routeNum, zone, eta:etaDisplay,
-          stops:bucket.map((s,i)=>({...s,seq:i+1})), // seq reassigned after NN below
+          stops:bucket.map((s,i)=>({...s,seq:i+1})),
           km:Math.round(km*10)/10, totalWeight:Math.round(totalWeight*10)/10,
           vehicle:vehicle.name, dispatch, travelTime:travelTimeStr(km, null),
           utilPct, bindingEta:bucketBindEta,
-          orsKm: null, orsMins: null, // to be filled
+          orsKm: null, orsMins: null, orsGeometry: null,
         });
         routeNum++;
-        bucket=[]; bucketWeight=0;
-        bucketBindEta=pool.bindingEta; bucketBindEtaH=pool.bindingEtaH;
+        bucket=[]; bucketWeight=0; bucketBindEta=pool.bindingEta; bucketBindEtaH=pool.bindingEtaH;
       };
 
       poolStops.forEach(s=>{
-        const testWeight = bucketWeight + s.weight;
-        const testKm = routeKm([...bucket, s]);
-        if(testWeight > maxFiniteCap || testKm > MAX_ROUTE_KM) flushBucket();
+        if(bucketWeight + s.weight > maxFiniteCap || routeKm([...bucket, s]) > MAX_ROUTE_KM) flushBucket();
         bucket.push(s); bucketWeight += s.weight;
         const sEtaH = etaToHours(s.eta);
-        if(sEtaH!==null && (bucketBindEtaH===null || sEtaH < bucketBindEtaH)) {
-          bucketBindEta = s.eta; bucketBindEtaH = sEtaH;
-        }
+        if(sEtaH!==null && (bucketBindEtaH===null || sEtaH < bucketBindEtaH)) { bucketBindEta = s.eta; bucketBindEtaH = sEtaH; }
       });
       flushBucket();
     });
   });
 
-  // ── Step 4: ORS enrichment ──────────────────────────────────────────────
   if (orsKey && orsMode !== 'off') {
     setLoading(true, `Fetching road distances for ${allRoutes.length} routes…`);
-
     for (let i = 0; i < allRoutes.length; i++) {
       const r = allRoutes[i];
       setLoading(true, `ORS route ${i+1} / ${allRoutes.length}: ${r.zone}…`);
-
       let distMatrix = null;
-
-      // per_stop: get full distance matrix first, use it for NN ordering
-      if (orsMode === 'per_stop' && r.stops.length > 1) {
-        const points = [WAREHOUSE, ...r.stops];
-        distMatrix = await getOrsMatrix(points);
-      }
-
-      // Re-sequence stops with nearest-neighbour (using matrix if available)
+      if (orsMode === 'per_stop' && r.stops.length > 1) distMatrix = await getOrsMatrix([WAREHOUSE, ...r.stops]);
       const resequenced = await nearestNeighbour(r.stops, distMatrix);
       resequenced.forEach((s,i)=>s.seq=i+1);
       r.stops = resequenced;
-
-      // Get real road distance + duration + geometry for this ordered route
-      const waypoints = [WAREHOUSE, ...r.stops];
-      const { km, mins, geometry } = await getRoadDistance(waypoints);
-      r.orsKm      = Math.round(km * 10) / 10;
-      r.orsMins    = Math.round(mins);
-      r.km         = r.orsKm;   // override haversine estimate
-      r.orsGeometry = geometry || null; // store road geometry for map
-
-      // Recalculate dispatch time with real drive time
-      r.dispatch    = dispatchTimeFromMins(r.bindingEta, mins * 1.2); // +20% traffic
-      r.travelTime  = travelTimeStr(km, mins * 1.2);
+      const { km, mins, geometry } = await getRoadDistance([WAREHOUSE, ...r.stops]);
+      r.orsKm = Math.round(km*10)/10; r.orsMins = Math.round(mins);
+      r.km = r.orsKm; r.orsGeometry = geometry || null;
+      r.dispatch = dispatchTimeFromMins(r.bindingEta, mins * 1.2);
+      r.travelTime = travelTimeStr(km, mins * 1.2);
     }
-
     setLoading(false);
   } else {
-    // No ORS: run sync nearest-neighbour and reassign seq
     for (const r of allRoutes) {
       const seq = await nearestNeighbour(r.stops, null);
       seq.forEach((s,i)=>s.seq=i+1);
@@ -1586,10 +1612,124 @@ async function buildRoutes(rows) {
     }
   }
 
+  activeZone = '__ALL__';
   renderUI();
 }
 
-// ─── RENDER ──────────────────────────────────────────────────────────────────
+// ─── ZONE SIDEBAR ─────────────────────────────────────────────────────────────
+function buildZoneSidebar() {
+  const sidebar = document.getElementById('zoneSidebar');
+  sidebar.classList.add('visible');
+
+  // Show mobile toggle button
+  document.getElementById('mobileSidebarToggle').style.display = 'flex';
+
+  renderZoneList();
+}
+
+function getZoneStats() {
+  const stats = {};
+  allRoutes.forEach(r => {
+    if (!stats[r.zone]) stats[r.zone] = { routes: 0, stops: 0, weight: 0 };
+    stats[r.zone].routes++;
+    stats[r.zone].stops += r.stops.length;
+    stats[r.zone].weight += r.totalWeight;
+  });
+  return stats;
+}
+
+function renderZoneList() {
+  const q = (document.getElementById('zsbSearch')?.value || '').toLowerCase().trim();
+  const stats = getZoneStats();
+  const zones = Object.keys(stats).sort();
+  const filtered = q ? zones.filter(z => z.toLowerCase().includes(q)) : zones;
+
+  const totalRoutes = allRoutes.length;
+  const totalStops = allRoutes.reduce((s, r) => s + r.stops.length, 0);
+
+  let html = '';
+
+  // "All Zones" item (only shown when not searching)
+  if (!q) {
+    html += `<div class="zone-item all-zones-item ${activeZone === '__ALL__' ? 'active' : ''}" onclick="setActiveZone('__ALL__')">
+      <span class="zi-name">All Zones</span>
+      <span class="zi-count">${totalRoutes}</span>
+    </div>
+    <div class="zone-divider"></div>`;
+  }
+
+  filtered.forEach((zone, i) => {
+    const color = ROUTE_COLORS[i % ROUTE_COLORS.length];
+    const isActive = activeZone === zone;
+    html += `<div class="zone-item ${isActive ? 'active' : ''}" onclick="setActiveZone('${zone.replace(/'/g,"\\'")}')">
+      <div class="zi-dot" style="background:${color}"></div>
+      <span class="zi-name" title="${zone}">${zone}</span>
+      <span class="zi-count">${stats[zone].routes}</span>
+    </div>`;
+  });
+
+  if (filtered.length === 0) {
+    html += `<div style="text-align:center;padding:20px 10px;font-size:12px;color:var(--text-muted)">No zones match</div>`;
+  }
+
+  document.getElementById('zoneList').innerHTML = html;
+}
+
+function filterZoneSidebar() {
+  renderZoneList();
+}
+
+function setActiveZone(zone) {
+  activeZone = zone;
+  renderZoneList();
+  renderFilteredRoutes();
+  // Close mobile sidebar if open
+  document.getElementById('zoneSidebar').classList.remove('mobile-open');
+}
+
+function toggleMobileSidebar() {
+  document.getElementById('zoneSidebar').classList.toggle('mobile-open');
+}
+
+// ─── FILTERED ROUTE RENDERING ─────────────────────────────────────────────────
+function getFilteredRoutes() {
+  if (activeZone === '__ALL__') return allRoutes;
+  return allRoutes.filter(r => r.zone === activeZone);
+}
+
+function renderFilteredRoutes() {
+  const filtered = getFilteredRoutes();
+  const banner = document.getElementById('zoneFilterBanner');
+  const emptyZone = document.getElementById('emptyZoneState');
+  const grid = document.getElementById('routeGrid');
+  const tableSection = document.getElementById('tableSection');
+  const viewTitle = document.getElementById('viewTitleLabel');
+
+  if (activeZone === '__ALL__') {
+    banner.classList.remove('show');
+    viewTitle.textContent = 'Routes Overview';
+  } else {
+    banner.classList.add('show');
+    document.getElementById('zoneFilterLabel').textContent = activeZone;
+    viewTitle.textContent = activeZone;
+  }
+
+  document.getElementById('routeCount').textContent = `${filtered.length} route${filtered.length!==1?'s':''}`;
+
+  if (filtered.length === 0) {
+    emptyZone.style.display = 'block';
+    grid.style.display = 'none';
+    tableSection.style.display = 'none';
+  } else {
+    emptyZone.style.display = 'none';
+    grid.style.display = 'grid';
+    tableSection.style.display = 'block';
+    renderRouteGrid(filtered);
+    renderTable(filtered);
+  }
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
 function renderUI() {
   const totalOrders=allRoutes.reduce((s,r)=>s+r.stops.length,0);
   const totalWeight=allRoutes.reduce((s,r)=>s+r.totalWeight,0);
@@ -1600,9 +1740,8 @@ function renderUI() {
   document.getElementById('statsBar').style.display='grid';
   document.getElementById('uploadZone').style.display='none';
   document.getElementById('emptyState').style.display='none';
-  document.getElementById('routeCount').textContent=`${allRoutes.length} routes`;
+  document.getElementById('saveBtn').style.display='flex';
 
-  // Show dropped weight stat if any
   if(lastDroppedWeight>0) {
     document.getElementById('statDropped').textContent=Math.round(lastDroppedWeight);
     document.getElementById('statDroppedSub').textContent=`kg dropped (${lastRemovedCount} customer${lastRemovedCount!==1?'s':''})`;
@@ -1613,45 +1752,37 @@ function renderUI() {
     document.getElementById('statsBar').style.gridTemplateColumns='';
   }
 
-  // Show save button
-  document.getElementById('saveBtn').style.display='flex';
-
-  renderRouteGrid();
-  renderTable();
+  buildZoneSidebar();
+  renderFilteredRoutes();
   showCardView();
 }
 
-function renderRouteGrid() {
-  const grid=document.getElementById('routeGrid');
-  grid.innerHTML=allRoutes.map((r,idx)=>{
-    const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
-    const previewStops=r.stops.slice(0,3);
-    const more=r.stops.length-3;
+function renderRouteGrid(routes) {
+  const grid = document.getElementById('routeGrid');
+  grid.innerHTML = routes.map((r) => {
+    const idx = allRoutes.indexOf(r);
+    const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+    const previewStops = r.stops.slice(0,3);
+    const more = r.stops.length - 3;
     return `
     <div class="route-card" onclick="selectRoute(${idx})" style="--rc:${color}">
       <div class="rc-header">
         <div class="rc-num" style="background:${color}">R${r.routeNum}</div>
         <div class="rc-zone" title="${r.zone}">${r.zone}</div>
         <div class="rc-eta">${r.eta}</div>
-        <select class="vehicle-override" onchange="overrideVehicle(${idx},this.value)" onclick="event.stopPropagation()" title="Override vehicle">
+        <select class="vehicle-override" onchange="overrideVehicle(${idx},this.value)" onclick="event.stopPropagation()">
           ${['2W','Tata Ace','Bolero Pickup','Eicher 14 ft','Multi Vehicle'].map(v=>`<option value="${v}" ${v===r.vehicle?'selected':''}>${v}</option>`).join('')}
         </select>
       </div>
       <div class="rc-body">
         <div class="rc-metrics">
-          <div class="rc-metric">
-            <div class="m-val">${r.stops.length}</div>
-            <div class="m-lbl">Stops</div>
-          </div>
+          <div class="rc-metric"><div class="m-val">${r.stops.length}</div><div class="m-lbl">Stops</div></div>
           <div class="rc-metric">
             <div class="m-val">${r.totalWeight}</div>
             <div class="m-lbl">kg</div>
             ${r.utilPct!==null?`<div style="margin-top:4px;height:3px;border-radius:2px;background:var(--border);overflow:hidden"><div style="width:${Math.min(r.utilPct,100)}%;height:100%;background:${r.utilPct>=75?'var(--accent)':r.utilPct>=50?'var(--warn)':'var(--danger)'}"></div></div><div style="font-size:9px;margin-top:2px;color:${r.utilPct>=75?'var(--accent)':r.utilPct>=50?'var(--warn)':'var(--danger)'};font-family:var(--mono)">${r.utilPct}% full</div>`:''}
           </div>
-          <div class="rc-metric">
-            <div class="m-val">${r.km}</div>
-            <div class="m-lbl">km${r.orsKm ? ' <span title="Real road distance via ORS" style="color:var(--accent);font-size:9px">●ORS</span>' : ''}</div>
-          </div>
+          <div class="rc-metric"><div class="m-val">${r.km}</div><div class="m-lbl">km</div></div>
         </div>
         <div class="rc-dispatch">
           <span class="d-icon">🕐</span>
@@ -1660,31 +1791,25 @@ function renderRouteGrid() {
           <span class="d-travel">${r.travelTime}</span>
         </div>
         <div class="rc-preview">
-          ${previewStops.map((s,i)=>`
-            <div class="preview-stop">
-              <div class="preview-dot" style="background:${color}">${s.seq}</div>
-              <span class="preview-name" title="${s.deliveredTo}">${s.deliveredTo}</span>
-            </div>`).join('')}
+          ${previewStops.map(s=>`<div class="preview-stop"><div class="preview-dot" style="background:${color}">${s.seq}</div><span class="preview-name" title="${s.deliveredTo}">${s.deliveredTo}</span></div>`).join('')}
           ${more>0?`<div class="preview-more">+${more} more stop${more>1?'s':''}</div>`:''}
         </div>
       </div>
       <div class="rc-footer">
-        <span class="rc-footer-txt">Click to view route on map</span>
-        <span class="view-route-btn">
-          View Route
-          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        </span>
+        <span class="rc-footer-txt">Click to view on map</span>
+        <span class="view-route-btn">View Route <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
       </div>
     </div>`;
   }).join('');
 }
 
-function renderTable() {
-  const tbody=document.getElementById('tableBody');
-  const rows=[];
-  allRoutes.forEach((r,idx)=>{
-    const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
-    r.stops.forEach(s=>{
+function renderTable(routes) {
+  const tbody = document.getElementById('tableBody');
+  const rows = [];
+  routes.forEach(r => {
+    const idx = allRoutes.indexOf(r);
+    const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+    r.stops.forEach(s => {
       rows.push(`<tr>
         <td><span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:4px;background:${color}20;color:${color};font-weight:500">R${r.routeNum}</span></td>
         <td class="td-mono">${s.seq}</td>
@@ -1696,10 +1821,10 @@ function renderTable() {
       </tr>`);
     });
   });
-  tbody.innerHTML=rows.join('');
+  tbody.innerHTML = rows.join('');
 }
 
-// ─── VIEW SWITCHING ───────────────────────────────────────────────────────────
+// ─── VIEW SWITCHING ────────────────────────────────────────────────────────────
 function showCardView() {
   document.getElementById('cardView').style.display='block';
   document.getElementById('detailView').style.display='none';
@@ -1712,7 +1837,6 @@ function selectRoute(idx) {
   document.getElementById('cardView').style.display='none';
   document.getElementById('detailView').style.display='block';
   document.getElementById('backBtn').style.display='flex';
-
   renderDetailSidebar(idx);
   renderDetailMap(idx);
 }
@@ -1720,9 +1844,7 @@ function selectRoute(idx) {
 function renderDetailSidebar(idx) {
   const r=allRoutes[idx];
   const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
-  const sidebar=document.getElementById('detailSidebar');
-
-  sidebar.innerHTML=`
+  document.getElementById('detailSidebar').innerHTML=`
     <div class="detail-sidebar-header" style="background:${color}">
       <div class="ds-route-label">ROUTE ${r.routeNum} · ${r.zone}</div>
       <div class="ds-zone">${r.eta!=='—'?`ETA ${r.eta}`:''} ${r.zone}</div>
@@ -1733,18 +1855,9 @@ function renderDetailSidebar(idx) {
       </div>
     </div>
     <div class="detail-metrics">
-      <div class="dm-item">
-        <div class="dm-val">${r.stops.length}</div>
-        <div class="dm-lbl">Stops</div>
-      </div>
-      <div class="dm-item">
-        <div class="dm-val">${r.totalWeight}</div>
-        <div class="dm-lbl">Total kg</div>
-      </div>
-      <div class="dm-item">
-        <div class="dm-val">${r.km}</div>
-        <div class="dm-lbl">Total km</div>
-      </div>
+      <div class="dm-item"><div class="dm-val">${r.stops.length}</div><div class="dm-lbl">Stops</div></div>
+      <div class="dm-item"><div class="dm-val">${r.totalWeight}</div><div class="dm-lbl">Total kg</div></div>
+      <div class="dm-item"><div class="dm-val">${r.km}</div><div class="dm-lbl">Total km</div></div>
     </div>
     <div class="dispatch-row">
       <span class="dr-label">🕐 Dispatch Time</span>
@@ -1753,152 +1866,73 @@ function renderDetailSidebar(idx) {
     </div>
     <div class="stops-header">Drop Sequence — ${r.stops.length} locations</div>
     <div class="stops-list">
-      ${r.stops.map(s=>`
-        <div class="stop-item">
-          <div class="stop-seq" style="background:${color}">${s.seq}</div>
-          <span class="stop-name" title="${s.deliveredTo}">${s.deliveredTo}</span>
-          <span class="stop-weight">${s.weight}kg</span>
-        </div>`).join('')}
+      ${r.stops.map(s=>`<div class="stop-item"><div class="stop-seq" style="background:${color}">${s.seq}</div><span class="stop-name" title="${s.deliveredTo}">${s.deliveredTo}</span><span class="stop-weight">${s.weight}kg</span></div>`).join('')}
     </div>
     <div style="padding:12px 16px;border-top:1px solid var(--border)">
       <button onclick="copyRouteForWhatsApp(${idx})" style="width:100%;padding:9px 14px;background:#25D366;color:white;border:none;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-        <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.989.518 3.846 1.426 5.448L2 22l4.658-1.407C8.15 21.481 10.016 22 12 22c5.523 0 10-4.477 10-10S17.522 2 12 2z" fill-opacity="0"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.126.558 4.121 1.532 5.852L0 24l6.363-1.667C8.05 23.394 9.983 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.662-.542-5.153-1.476l-.369-.22-3.779.99.999-3.672-.241-.379C2.574 15.68 2 13.9 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.126.558 4.121 1.532 5.852L0 24l6.363-1.667C8.05 23.394 9.983 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.9 0-3.662-.542-5.153-1.476l-.369-.22-3.779.99.999-3.672-.241-.379C2.574 15.68 2 13.9 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
         Copy for WhatsApp
       </button>
     </div>`;
 }
 
-// ─── MAP ─────────────────────────────────────────────────────────────────────
 function renderDetailMap(idx) {
   const r=allRoutes[idx];
   const color=ROUTE_COLORS[idx%ROUTE_COLORS.length];
-
-  // Init map on first use
   if(!map) {
     map=L.map('map').setView([28.6,77.1],10);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-      attribution:'© OpenStreetMap © CARTO', maxZoom:19
-    }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19}).addTo(map);
   }
-
-  // Clear existing layers
-  mapLayers.forEach(l=>map.removeLayer(l));
-  mapLayers=[];
-
-  // Warehouse marker
-  const whIcon=L.divIcon({
-    html:`<div style="width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid ${color};box-shadow:0 2px 6px rgba(0,0,0,0.2)"></div>`,
-    iconSize:[16,16], iconAnchor:[8,8], className:''
-  });
-  const whMarker=L.marker([WAREHOUSE.lat,WAREHOUSE.lng],{icon:whIcon})
-    .bindPopup(`<div class="popup-inner"><div class="popup-route">WAREHOUSE</div><div class="popup-name">Dispatch Origin</div><div class="popup-meta"><span>${WAREHOUSE.lat.toFixed(4)}, ${WAREHOUSE.lng.toFixed(4)}</span></div></div>`)
-    .addTo(map);
-  mapLayers.push(whMarker);
-
-  // Route polyline: use real road geometry if available, else straight line fallback
-  let latlngs;
-  if (r.orsGeometry && r.orsGeometry.length > 1) {
-    latlngs = r.orsGeometry; // real road shape from ORS
-  } else {
-    latlngs = [[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])];
-  }
+  mapLayers.forEach(l=>map.removeLayer(l)); mapLayers=[];
+  const whIcon=L.divIcon({html:`<div style="width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid ${color};box-shadow:0 2px 6px rgba(0,0,0,0.2)"></div>`,iconSize:[16,16],iconAnchor:[8,8],className:''});
+  mapLayers.push(L.marker([WAREHOUSE.lat,WAREHOUSE.lng],{icon:whIcon}).bindPopup(`<div class="popup-inner"><div class="popup-route">WAREHOUSE</div><div class="popup-name">Dispatch Origin</div></div>`).addTo(map));
+  let latlngs = r.orsGeometry?.length > 1 ? r.orsGeometry : [[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])];
   const lineStyle = r.orsGeometry ? {color,weight:3,opacity:0.85} : {color,weight:3,opacity:0.8,dashArray:'8,5'};
-  const line=L.polyline(latlngs, lineStyle).addTo(map);
-  mapLayers.push(line);
-
-  // Stop markers
+  mapLayers.push(L.polyline(latlngs,lineStyle).addTo(map));
   r.stops.forEach(s=>{
-    const icon=L.divIcon({
-      html:`<div style="background:${color};color:#fff;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,0.2)">${s.seq}</div>`,
-      iconSize:[26,26], iconAnchor:[13,13], className:''
-    });
-    const marker=L.marker([s.lat,s.lng],{icon})
-      .bindPopup(`<div class="popup-inner"><div class="popup-route">Route ${r.routeNum} · Stop ${s.seq}</div><div class="popup-name">${s.deliveredTo}</div><div class="popup-meta"><span>${s.weight} kg</span><span>${r.vehicle}</span></div></div>`)
-      .addTo(map);
-    mapLayers.push(marker);
+    const icon=L.divIcon({html:`<div style="background:${color};color:#fff;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,0.2)">${s.seq}</div>`,iconSize:[26,26],iconAnchor:[13,13],className:''});
+    mapLayers.push(L.marker([s.lat,s.lng],{icon}).bindPopup(`<div class="popup-inner"><div class="popup-route">Route ${r.routeNum} · Stop ${s.seq}</div><div class="popup-name">${s.deliveredTo}</div><div class="popup-meta"><span>${s.weight} kg</span><span>${r.vehicle}</span></div></div>`).addTo(map));
   });
-
-  // Fit bounds
-  const bounds=L.latLngBounds([[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])]);
-  map.fitBounds(bounds,{padding:[50,50]});
-
-  // Update legend color
+  map.fitBounds(L.latLngBounds([[WAREHOUSE.lat,WAREHOUSE.lng],...r.stops.map(s=>[s.lat,s.lng])]),{padding:[50,50]});
   document.getElementById('legendLine').style.background=color;
   document.getElementById('legendDot').style.background=color;
-
-  // Force map resize
   setTimeout(()=>map.invalidateSize(),100);
   setTimeout(()=>map.invalidateSize(),400);
 }
 
-// ─── WHATSAPP COPY ───────────────────────────────────────────────────────────
 function copyRouteForWhatsApp(idx) {
   const r = allRoutes[idx];
-  const lines = [];
-  lines.push(`🚛 *Route ${r.routeNum} — ${r.zone}*`);
-  lines.push(`📦 Vehicle: ${r.vehicle}`);
-  lines.push(`⏰ Dispatch: ${r.dispatch}`);
-  lines.push(`🛣 Distance: ${r.km} km · Travel: ${r.travelTime}`);
-  lines.push(`⚖️ Total load: ${r.totalWeight} kg`);
-  lines.push(``);
-  lines.push(`*Drop Sequence (${r.stops.length} stops):*`);
-  r.stops.forEach(s => {
-    lines.push(`${s.seq}. ${s.deliveredTo} — ${s.weight} kg`);
-  });
+  const lines = [`🚛 *Route ${r.routeNum} — ${r.zone}*`,`📦 Vehicle: ${r.vehicle}`,`⏰ Dispatch: ${r.dispatch}`,`🛣 Distance: ${r.km} km · Travel: ${r.travelTime}`,`⚖️ Total load: ${r.totalWeight} kg`,``,`*Drop Sequence (${r.stops.length} stops):*`];
+  r.stops.forEach(s => lines.push(`${s.seq}. ${s.deliveredTo} — ${s.weight} kg`));
   const text = lines.join('\n');
   navigator.clipboard.writeText(text).then(() => {
-    // Flash the button green briefly
     const btn = event.target.closest('button');
-    if (btn) {
-      const orig = btn.innerHTML;
-      btn.innerHTML = '✅ Copied!';
-      btn.style.background = '#128C7E';
-      setTimeout(() => { btn.innerHTML = orig; btn.style.background = '#25D366'; }, 2000);
-    }
-  }).catch(() => {
-    // Fallback for older browsers
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    alert('Route copied to clipboard!');
-  });
+    if (btn) { const orig = btn.innerHTML; btn.innerHTML = '✅ Copied!'; btn.style.background = '#128C7E'; setTimeout(() => { btn.innerHTML = orig; btn.style.background = '#25D366'; }, 2000); }
+  }).catch(() => { const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('Route copied!'); });
 }
 
-// ─── EXPORT ──────────────────────────────────────────────────────────────────
 function exportExcel() {
+  const routes = getFilteredRoutes();
   const wb=XLSX.utils.book_new();
-
-  // Sheet 1: all stops
   const rows=[['Delivered To','Weight (kg)','Route Number','Drop Sequence','Final Vehicle','Route Travel Time','Dispatch Time']];
-  allRoutes.forEach(r=>r.stops.forEach(s=>rows.push([s.deliveredTo,s.weight,r.routeNum,s.seq,r.vehicle,r.travelTime,r.dispatch])));
+  routes.forEach(r=>r.stops.forEach(s=>rows.push([s.deliveredTo,s.weight,r.routeNum,s.seq,r.vehicle,r.travelTime,r.dispatch])));
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:50},{wch:12},{wch:14},{wch:14},{wch:16},{wch:18},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws,'Dispatch Routes');
-
-  // Sheet 2: route summary with utilisation
   const sumRows=[['Route #','Zone','ETA','Vehicle','Stops','Total kg','Vehicle Cap (kg)','Fill %','Total km','Travel Time','Dispatch Time']];
-  allRoutes.forEach(r=>{
+  routes.forEach(r=>{
     const cap=VEHICLE_CAPS.find(v=>v.name===r.vehicle);
-    const capKg=cap&&cap.max!==Infinity?cap.max:'—';
-    const fillPct=cap&&cap.max!==Infinity?Math.round((r.totalWeight/cap.max)*100)+'%':'—';
-    sumRows.push([r.routeNum,r.zone,r.eta,r.vehicle,r.stops.length,r.totalWeight,capKg,fillPct,r.km,r.travelTime,r.dispatch]);
+    sumRows.push([r.routeNum,r.zone,r.eta,r.vehicle,r.stops.length,r.totalWeight,cap&&cap.max!==Infinity?cap.max:'—',cap&&cap.max!==Infinity?Math.round((r.totalWeight/cap.max)*100)+'%':'—',r.km,r.travelTime,r.dispatch]);
   });
   const ws2=XLSX.utils.aoa_to_sheet(sumRows);
-  ws2['!cols']=[{wch:10},{wch:16},{wch:12},{wch:16},{wch:8},{wch:12},{wch:16},{wch:10},{wch:12},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws2,'Route Summary');
-
-  XLSX.writeFile(wb,`dispatch_routes_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb,`dispatch_routes_${activeZone!=='__ALL__'?activeZone.replace(/\s+/g,'_')+'_':''}${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let lastDroppedWeight=0, lastRemovedCount=0;
-let editingCustIdx=null; // null = adding new
+let editingCustIdx=null;
 
-// ─── CUSTOMER MANAGEMENT ─────────────────────────────────────────────────────
-// Load any custom customers saved in localStorage and merge into MASTER_DB
 function loadCustomDB() {
   try {
     const saved=localStorage.getItem('dispatch_custom_customers');
@@ -1910,16 +1944,6 @@ function loadCustomDB() {
   } catch(e){}
 }
 
-function saveCustomDB() {
-  // Save all custom customers to localStorage
-  // Custom customers are those added via the UI (tracked in customEntries set)
-  try {
-    const key = 'dispatch_custom_customers';
-    const saved = JSON.parse(localStorage.getItem(key) || '[]');
-    localStorage.setItem(key, JSON.stringify(saved));
-  } catch(e) {}
-}
-
 function rebuildMasterMap() {
   masterMap.clear();
   MASTER_DB.forEach(r=>masterMap.set(normalise(r.name),r));
@@ -1927,7 +1951,6 @@ function rebuildMasterMap() {
 
 function openCustomerModal() {
   renderCustomerList();
-  // Populate zone datalist
   const zones=[...new Set(MASTER_DB.map(r=>r.zone).filter(Boolean))].sort();
   document.getElementById('zoneList').innerHTML=zones.map(z=>`<option value="${z}">`).join('');
   document.getElementById('customerModal').classList.add('open');
@@ -1939,34 +1962,20 @@ function renderCustomerList() {
   const filtered=MASTER_DB.filter(c=>!q||c.name.toLowerCase().includes(q));
   const list=document.getElementById('custList');
   if(!filtered.length) { list.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">No customers found</div>'; return; }
-  list.innerHTML=filtered.map((c,i)=>{
+  list.innerHTML=filtered.map(c=>{
     const realIdx=MASTER_DB.indexOf(c);
-    return `<div class="cust-row">
-      <div class="cust-info">
-        <div class="cust-name" title="${c.name}">${c.name}</div>
-        <div class="cust-meta">${c.zone} · ETA ${c.eta||'—'} · ${c.vehicle} · ${c.lat.toFixed(4)},${c.lng.toFixed(4)}</div>
-      </div>
-      <div class="cust-actions">
-        <button class="cust-btn" onclick="openEditCustomer(${realIdx})">Edit</button>
-        <button class="cust-btn del" onclick="deleteCustomer(${realIdx})">Delete</button>
-      </div>
-    </div>`;
+    return `<div class="cust-row"><div class="cust-info"><div class="cust-name" title="${c.name}">${c.name}</div><div class="cust-meta">${c.zone} · ETA ${c.eta||'—'} · ${c.vehicle} · ${c.lat.toFixed(4)},${c.lng.toFixed(4)}</div></div><div class="cust-actions"><button class="cust-btn" onclick="openEditCustomer(${realIdx})">Edit</button><button class="cust-btn del" onclick="deleteCustomer(${realIdx})">Delete</button></div></div>`;
   }).join('');
 }
 
 function openAddCustomer() {
   editingCustIdx=null;
   document.getElementById('addCustTitle').textContent='Add Customer';
-  document.getElementById('cfName').value='';
-  document.getElementById('cfLat').value='';
-  document.getElementById('cfLng').value='';
-  document.getElementById('cfZone').value='';
-  document.getElementById('cfEta').value='';
+  ['cfName','cfLat','cfLng','cfZone','cfEta'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cfVehicle').value='Tata Ace';
   document.getElementById('cfError').style.display='none';
   document.getElementById('addCustModal').classList.add('open');
 }
-
 function openEditCustomer(idx) {
   editingCustIdx=idx;
   const c=MASTER_DB[idx];
@@ -1980,9 +1989,7 @@ function openEditCustomer(idx) {
   document.getElementById('cfError').style.display='none';
   document.getElementById('addCustModal').classList.add('open');
 }
-
 function closeAddCustomer() { document.getElementById('addCustModal').classList.remove('open'); }
-
 function saveCustomer() {
   const name=document.getElementById('cfName').value.trim();
   const lat=parseFloat(document.getElementById('cfLat').value);
@@ -1991,65 +1998,38 @@ function saveCustomer() {
   const eta=document.getElementById('cfEta').value.trim();
   const vehicle=document.getElementById('cfVehicle').value;
   const errEl=document.getElementById('cfError');
-
   if(!name){errEl.textContent='Customer name is required.';errEl.style.display='block';return;}
-  if(isNaN(lat)||isNaN(lng)){errEl.textContent='Valid latitude and longitude are required.';errEl.style.display='block';return;}
+  if(isNaN(lat)||isNaN(lng)){errEl.textContent='Valid lat/lng required.';errEl.style.display='block';return;}
   if(!zone){errEl.textContent='Zone is required.';errEl.style.display='block';return;}
-
   const entry={name,lat,lng,zone,eta,vehicle};
-
   if(editingCustIdx!==null) {
-    const oldEntry = MASTER_DB[editingCustIdx];
-    MASTER_DB[editingCustIdx] = entry;
-    // Update localStorage: find by old name and replace
-    try {
-      const existing = JSON.parse(localStorage.getItem('dispatch_custom_customers') || '[]');
-      const ei = existing.findIndex(e => e.name === oldEntry.name);
-      if (ei >= 0) existing[ei] = entry; else existing.push(entry);
-      localStorage.setItem('dispatch_custom_customers', JSON.stringify(existing));
-    } catch(e) {}
+    const oldEntry=MASTER_DB[editingCustIdx];
+    MASTER_DB[editingCustIdx]=entry;
+    try { const existing=JSON.parse(localStorage.getItem('dispatch_custom_customers')||'[]'); const ei=existing.findIndex(e=>e.name===oldEntry.name); if(ei>=0) existing[ei]=entry; else existing.push(entry); localStorage.setItem('dispatch_custom_customers',JSON.stringify(existing)); } catch(e){}
   } else {
     MASTER_DB.push(entry);
-    // Add to localStorage
-    try {
-      const existing = JSON.parse(localStorage.getItem('dispatch_custom_customers') || '[]');
-      existing.push(entry);
-      localStorage.setItem('dispatch_custom_customers', JSON.stringify(existing));
-    } catch(e) {}
+    try { const existing=JSON.parse(localStorage.getItem('dispatch_custom_customers')||'[]'); existing.push(entry); localStorage.setItem('dispatch_custom_customers',JSON.stringify(existing)); } catch(e){}
   }
-  rebuildMasterMap();
-
-  closeAddCustomer();
-  renderCustomerList();
+  rebuildMasterMap(); closeAddCustomer(); renderCustomerList();
 }
-
 function deleteCustomer(idx) {
   const c=MASTER_DB[idx];
   if(!confirm(`Delete "${c.name}"?`)) return;
-  MASTER_DB.splice(idx,1);
-  rebuildMasterMap();
-  try {
-    const existing=JSON.parse(localStorage.getItem('dispatch_custom_customers')||'[]');
-    const ei=existing.findIndex(e=>e.name===c.name);
-    if(ei>=0){ existing.splice(ei,1); localStorage.setItem('dispatch_custom_customers',JSON.stringify(existing)); }
-  } catch(e){}
+  MASTER_DB.splice(idx,1); rebuildMasterMap();
+  try { const existing=JSON.parse(localStorage.getItem('dispatch_custom_customers')||'[]'); const ei=existing.findIndex(e=>e.name===c.name); if(ei>=0){ existing.splice(ei,1); localStorage.setItem('dispatch_custom_customers',JSON.stringify(existing)); } } catch(e){}
   renderCustomerList();
 }
 
-// ─── VEHICLE OVERRIDE ────────────────────────────────────────────────────────
 function overrideVehicle(idx, newVehicle) {
   allRoutes[idx].vehicle=newVehicle;
   const cap=VEHICLE_CAPS.find(v=>v.name===newVehicle);
   allRoutes[idx].utilPct=cap&&cap.max!==Infinity?Math.round((allRoutes[idx].totalWeight/cap.max)*100):null;
-  renderRouteGrid();
-  renderTable();
+  renderFilteredRoutes();
 }
 
-// ─── SAVE / LOAD ROUTES ──────────────────────────────────────────────────────
 function saveRoutes() {
   try {
-    const payload={routes:allRoutes, savedAt:Date.now()};
-    localStorage.setItem('dispatch_saved_routes',JSON.stringify(payload));
+    localStorage.setItem('dispatch_saved_routes',JSON.stringify({routes:allRoutes,savedAt:Date.now()}));
     const btn=document.getElementById('saveBtn');
     btn.innerHTML=`<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:white;fill:none;stroke-width:2"><polyline points="20 6 9 17 4 12"/></svg><span>Saved</span>`;
     setTimeout(()=>{ btn.innerHTML=`<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:white;fill:none;stroke-width:2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span>Save</span>`; },2000);
@@ -2076,21 +2056,20 @@ function loadSavedRoutes() {
     allRoutes=payload.routes;
     document.getElementById('savedBanner').classList.remove('show');
     document.getElementById('uploadZone').style.display='none';
-    lastDroppedWeight=0; lastRemovedCount=0;
+    lastDroppedWeight=0; lastRemovedCount=0; activeZone='__ALL__';
     renderUI();
   } catch(e){ alert('Could not load saved routes.'); }
 }
-
 function dismissSavedBanner() { document.getElementById('savedBanner').classList.remove('show'); }
 
-// ─── FILE INPUT ───────────────────────────────────────────────────────────────
-const zone=document.getElementById('uploadZone');
-const input=document.getElementById('fileInput');
-zone.addEventListener('click',()=>input.click());
-input.addEventListener('change',e=>{ if(e.target.files[0]) processFile(e.target.files[0]); });
-zone.addEventListener('dragover',e=>{ e.preventDefault(); zone.classList.add('drag'); });
-zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
-zone.addEventListener('drop',e=>{ e.preventDefault(); zone.classList.remove('drag'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+// ─── FILE INPUT ────────────────────────────────────────────────────────────────
+const uploadZone=document.getElementById('uploadZone');
+const fileInput=document.getElementById('fileInput');
+uploadZone.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>{ if(e.target.files[0]) processFile(e.target.files[0]); });
+uploadZone.addEventListener('dragover',e=>{ e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop',e=>{ e.preventDefault(); uploadZone.classList.remove('drag'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
 
 document.getElementById('dateLabel').textContent=`D-2 · ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}`;
 loadCustomDB();
