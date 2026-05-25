@@ -1118,56 +1118,95 @@ function optimiseStops(stops) {
 }
 
 // Find the best compliant dispatch time respecting no-entry windows
-// Returns { dispatchH, arrivalH, noEntryConflict }
+// ─── DISPATCH TIME RESOLVER ───────────────────────────────────────────────────
+// ETA is a DEADLINE: vehicle must arrive AT OR BEFORE ETA (not exactly at).
+// No-entry: vehicle must ARRIVE (reach first stop) within an allowed window.
+// Strategy: try each allowed window from earliest to latest.
+//   For each window [ws, we]:
+//     - Best dispatch = ws - driveH (arrive right at window open)
+//     - If that's before MIN_DISPATCH_H, dispatch at MIN_DISPATCH_H → arrival = MIN_DISPATCH_H + driveH
+//     - Arrival must be within [ws, we]  AND  arrival must be <= etaH (deadline)
+//     - If valid → return as auto-resolved (no conflict)
+//   If no window fits → flag as conflict with best suggestion.
 function resolveDispatchTime(zone, etaH, km, stopCount) {
-  const travelKmH = km / AVG_SPEED_KMH;
-  const unloadH   = (stopCount * UNLOAD_MIN_PER_STOP) / 60;
-  const totalTripH = travelKmH + unloadH;
+  const driveH  = km / AVG_SPEED_KMH;
+  const unloadH = (stopCount * UNLOAD_MIN_PER_STOP) / 60;
 
-  const windows = DELHI_ZONES.includes(zone)   ? NO_ENTRY.DELHI
-                : GURGAON_ZONES.includes(zone)  ? NO_ENTRY.GURGAON
+  const windows = DELHI_ZONES.includes(zone)  ? NO_ENTRY.DELHI
+                : GURGAON_ZONES.includes(zone) ? NO_ENTRY.GURGAON
                 : null;
 
-  // Ideal dispatch = ETA minus full trip time
-  let idealDispatch = etaH !== null ? etaH - totalTripH : MIN_DISPATCH_H;
-  if(idealDispatch < MIN_DISPATCH_H) idealDispatch = MIN_DISPATCH_H;
-
+  // No-entry zone: simple ideal dispatch
   if(!windows) {
-    return { dispatchH: idealDispatch, noEntryConflict: false };
+    let d = etaH !== null ? etaH - driveH - unloadH : MIN_DISPATCH_H;
+    if(d < MIN_DISPATCH_H) d = MIN_DISPATCH_H;
+    return { dispatchH: d, noEntryConflict: false };
   }
 
-  // Arrival time if we dispatch at idealDispatch
-  // For no-entry zones we check when the vehicle is IN the zone (approx = arrival)
-  const estArrival = idealDispatch + travelKmH;
-
-  // Check if arrival falls in an allowed window
-  const inAllowed = windows.some(([ws, we]) => estArrival >= ws && estArrival <= we);
-  if(inAllowed) {
-    return { dispatchH: idealDispatch, noEntryConflict: false };
-  }
-
-  // Try to reschedule: find the earliest allowed window where arrival fits
-  // and dispatch is >= MIN_DISPATCH_H, and final delivery <= ETA (if set)
+  // Try each allowed window
   for(const [ws, we] of windows) {
-    // Arrive at the start of this window
-    const candidateArrival  = ws;
-    const candidateDispatch = candidateArrival - travelKmH;
-    if(candidateDispatch < MIN_DISPATCH_H) continue;
-    // Make sure delivery is before ETA
-    const deliveryEnd = candidateArrival + unloadH;
-    if(etaH !== null && deliveryEnd > etaH + 0.5) continue; // 30-min grace
-    return { dispatchH: candidateDispatch, noEntryConflict: false, rescheduled: true, window: [ws,we] };
+    // Option A: dispatch so vehicle arrives exactly at window open (ws)
+    let dispA   = ws - driveH;
+    let arrA    = ws;
+    // Option B: dispatch at MIN_DISPATCH_H (5am) → arrive later
+    let dispB   = MIN_DISPATCH_H;
+    let arrB    = MIN_DISPATCH_H + driveH;
+
+    // Prefer the later of the two dispatches (less idle time at warehouse)
+    let dispatch, arrival;
+    if(dispA >= MIN_DISPATCH_H) {
+      dispatch = dispA; arrival = arrA;
+    } else {
+      dispatch = dispB; arrival = arrB;
+    }
+
+    // Arrival must be inside the allowed window
+    if(arrival < ws || arrival > we) continue;
+    // Arrival must be at or before the ETA deadline
+    if(etaH !== null && arrival > etaH) continue;
+
+    const rescheduled = Math.abs(dispatch - (etaH !== null ? etaH - driveH - unloadH : MIN_DISPATCH_H)) > 0.1;
+    return { dispatchH: dispatch, noEntryConflict: false, rescheduled };
   }
 
-  // Try the second window
+  // No window worked — flag conflict, suggest the best achievable option
+  // Pick whichever window gives an arrival closest to (but not exceeding) etaH
+  let bestDispatch = MIN_DISPATCH_H, bestArrival = MIN_DISPATCH_H + driveH;
   for(const [ws, we] of windows) {
-    const candidateArrival  = ws;
-    const candidateDispatch = Math.max(MIN_DISPATCH_H, candidateArrival - travelKmH);
-    return { dispatchH: candidateDispatch, noEntryConflict: true,
-             suggestion: hoursToTimeStr(candidateDispatch) };
+    const d = Math.max(MIN_DISPATCH_H, ws - driveH);
+    const a = d + driveH;
+    if(etaH === null || a <= etaH) { bestDispatch = d; bestArrival = a; break; }
   }
+  return {
+    dispatchH: bestDispatch,
+    noEntryConflict: true,
+    suggestion: hoursToTimeStr(bestDispatch),
+    arrivalAtSuggestion: hoursToTimeStr(bestArrival)
+  };
+}
 
-  return { dispatchH: idealDispatch, noEntryConflict: true };
+// Compute the effective km cap for a no-entry zone + ETA deadline combo.
+// Vehicle must ARRIVE (dispatch + driveH) within an allowed window AND before etaH.
+// Returns the max km that allows a valid dispatch from MIN_DISPATCH_H.
+function noEntryKmCap(zone, etaH) {
+  const windows = DELHI_ZONES.includes(zone)  ? NO_ENTRY.DELHI
+                : GURGAON_ZONES.includes(zone) ? NO_ENTRY.GURGAON
+                : null;
+  if(!windows) return MAX_ROUTE_KM;
+
+  let bestMaxKm = 0;
+  for(const [ws, we] of windows) {
+    // If dispatching at MIN_DISPATCH_H, arrive at MIN_DISPATCH_H + driveH.
+    // Need arrival in [ws, we] AND <= etaH.
+    // So: driveH <= we - MIN_DISPATCH_H  AND  MIN_DISPATCH_H + driveH <= etaH (if set)
+    const maxDriveFromMorning = we - MIN_DISPATCH_H;
+    const maxDriveByEta       = etaH !== null ? etaH - MIN_DISPATCH_H : Infinity;
+    // Also: arrival >= ws means MIN_DISPATCH_H + driveH >= ws → driveH >= ws - MIN_DISPATCH_H
+    // (minimum drive, not a cap — so we only cap at the upper bound)
+    const cap = Math.min(maxDriveFromMorning, maxDriveByEta) * AVG_SPEED_KMH;
+    if(cap > bestMaxKm) bestMaxKm = cap;
+  }
+  return Math.min(bestMaxKm, MAX_ROUTE_KM);
 }
 
 // ─── MAIN ROUTE BUILDER ───────────────────────────────────────────────────────
@@ -1228,6 +1267,10 @@ async function buildRoutes(rows) {
     const maxUsable = VEHICLE_CAPS[VEHICLE_CAPS.length-1].usable;
     const etaH = group.etaH;
 
+    // For no-entry zones, compute the km cap that guarantees a compliant dispatch window.
+    // This ensures the bin-packer never builds a route that physically can't fit in a window.
+    const effectiveKmCap = noEntryKmCap(group.zone, etaH);
+
     // Split group into vehicle-sized buckets using a savings-style bin-pack:
     // Sort by distance from warehouse (farthest first — deliver on the way out)
     const sorted = [...group.stops].sort((a,b) =>
@@ -1244,7 +1287,8 @@ async function buildRoutes(rows) {
         const testW  = bucketWeights[bi] + s.weight;
         const testKm = routeKm([...buckets[bi], s]);
         const testH  = routeTravelHours(testKm, buckets[bi].length + 1);
-        if(testW <= maxUsable && testKm <= MAX_ROUTE_KM && testH <= MAX_TRAVEL_H) {
+        // Use effectiveKmCap (tighter than MAX_ROUTE_KM for no-entry zones)
+        if(testW <= maxUsable && testKm <= effectiveKmCap && testH <= MAX_TRAVEL_H) {
           buckets[bi].push(s);
           bucketWeights[bi] += s.weight;
           placed = true;
@@ -1279,8 +1323,9 @@ async function buildRoutes(rows) {
       if(travelH > MAX_TRAVEL_H)  violations.push(`⏱ Travel ${travelH.toFixed(1)}h > 12h limit`);
       if(km > MAX_ROUTE_KM)       violations.push(`📍 Distance ${km.toFixed(0)}km > 150km limit`);
       if(dtResult.noEntryConflict) {
-        const sug = dtResult.suggestion ? ` (suggest dispatch at ${dtResult.suggestion})` : '';
-        violations.push(`🚫 No-entry conflict for ${group.zone}${sug}`);
+        const arrStr = dtResult.arrivalAtSuggestion ? ` (arrives ~${dtResult.arrivalAtSuggestion})` : '';
+        const sug    = dtResult.suggestion ? ` — best dispatch: ${dtResult.suggestion}${arrStr}` : '';
+        violations.push(`🚫 No-entry: route too long to fit in any allowed window${sug}. Split this route further.`);
       }
       if(violations.length) constraintViolations.push({ routeNum, zone: group.zone, violations });
 
