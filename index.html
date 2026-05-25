@@ -1069,56 +1069,118 @@ function matchToMaster(deliveredTo) {
   return best;
 }
 
-async function nearestNeighbour(stops) {
-  if(stops.length<=1) return stops;
-  const unvisited=[...stops], route=[];
+
+// ─── OPTIMISED ROUTING ENGINE ─────────────────────────────────────────────────
+
+// Nearest-neighbour construction heuristic
+function nearestNeighbourTour(stops) {
+  if(stops.length <= 1) return [...stops];
+  const unvisited = [...stops], route = [];
+  let prev = WAREHOUSE;
   while(unvisited.length) {
-    let minD=Infinity, minI=0;
-    const prev = route.length ? route[route.length-1] : WAREHOUSE;
-    unvisited.forEach((s,i)=>{
-      const d=haversine(prev.lat,prev.lng,s.lat,s.lng);
-      if(d<minD){minD=d;minI=i;}
-    });
+    let minD = Infinity, minI = 0;
+    unvisited.forEach((s,i)=>{ const d=haversine(prev.lat,prev.lng,s.lat,s.lng); if(d<minD){minD=d;minI=i;} });
     route.push(unvisited[minI]);
+    prev = unvisited[minI];
     unvisited.splice(minI,1);
   }
   return route;
 }
 
-// ─── FILE PARSING ─────────────────────────────────────────────────────────────
-function processFile(file) {
-  const reader = new FileReader();
-  if(file.name.endsWith('.csv')) {
-    reader.onload = e => {
-      // Parse CSV manually using XLSX
-      const wb = XLSX.read(e.target.result, {type:'string'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      buildRoutes(XLSX.utils.sheet_to_json(ws, {defval:''}));
-    };
-    reader.readAsText(file);
-  } else {
-    reader.onload = e => {
-      const wb = XLSX.read(e.target.result, {type:'binary'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      buildRoutes(XLSX.utils.sheet_to_json(ws, {defval:''}));
-    };
-    reader.readAsBinaryString(file);
+// 2-opt improvement: swap edges to shorten route distance
+function twoOpt(stops) {
+  if(stops.length < 4) return stops;
+  let improved = true, best = [...stops];
+  while(improved) {
+    improved = false;
+    for(let i=0;i<best.length-1;i++) {
+      for(let j=i+2;j<best.length;j++) {
+        if(j === best.length-1 && i === 0) continue;
+        // Distance before swap
+        const a = best[i], b = best[i+1], c = best[j], d = best[(j+1)%best.length];
+        const prevA = i===0 ? WAREHOUSE : best[i-1];
+        const after = j===best.length-1 ? WAREHOUSE : best[j+1];
+        const dBefore = haversine(prevA.lat,prevA.lng,a.lat,a.lng) + haversine(c.lat,c.lng,after.lat,after.lng);
+        const dAfter  = haversine(prevA.lat,prevA.lng,c.lat,c.lng) + haversine(a.lat,a.lng,after.lat,after.lng);
+        if(dAfter < dBefore - 0.001) {
+          best = [...best.slice(0,i), ...best.slice(i,j+1).reverse(), ...best.slice(j+1)];
+          improved = true;
+        }
+      }
+    }
   }
+  return best;
 }
 
-// ─── ROUTE BUILDING ───────────────────────────────────────────────────────────
+function optimiseStops(stops) {
+  const tour = nearestNeighbourTour(stops);
+  return twoOpt(tour);
+}
+
+// Find the best compliant dispatch time respecting no-entry windows
+// Returns { dispatchH, arrivalH, noEntryConflict }
+function resolveDispatchTime(zone, etaH, km, stopCount) {
+  const travelKmH = km / AVG_SPEED_KMH;
+  const unloadH   = (stopCount * UNLOAD_MIN_PER_STOP) / 60;
+  const totalTripH = travelKmH + unloadH;
+
+  const windows = DELHI_ZONES.includes(zone)   ? NO_ENTRY.DELHI
+                : GURGAON_ZONES.includes(zone)  ? NO_ENTRY.GURGAON
+                : null;
+
+  // Ideal dispatch = ETA minus full trip time
+  let idealDispatch = etaH !== null ? etaH - totalTripH : MIN_DISPATCH_H;
+  if(idealDispatch < MIN_DISPATCH_H) idealDispatch = MIN_DISPATCH_H;
+
+  if(!windows) {
+    return { dispatchH: idealDispatch, noEntryConflict: false };
+  }
+
+  // Arrival time if we dispatch at idealDispatch
+  // For no-entry zones we check when the vehicle is IN the zone (approx = arrival)
+  const estArrival = idealDispatch + travelKmH;
+
+  // Check if arrival falls in an allowed window
+  const inAllowed = windows.some(([ws, we]) => estArrival >= ws && estArrival <= we);
+  if(inAllowed) {
+    return { dispatchH: idealDispatch, noEntryConflict: false };
+  }
+
+  // Try to reschedule: find the earliest allowed window where arrival fits
+  // and dispatch is >= MIN_DISPATCH_H, and final delivery <= ETA (if set)
+  for(const [ws, we] of windows) {
+    // Arrive at the start of this window
+    const candidateArrival  = ws;
+    const candidateDispatch = candidateArrival - travelKmH;
+    if(candidateDispatch < MIN_DISPATCH_H) continue;
+    // Make sure delivery is before ETA
+    const deliveryEnd = candidateArrival + unloadH;
+    if(etaH !== null && deliveryEnd > etaH + 0.5) continue; // 30-min grace
+    return { dispatchH: candidateDispatch, noEntryConflict: false, rescheduled: true, window: [ws,we] };
+  }
+
+  // Try the second window
+  for(const [ws, we] of windows) {
+    const candidateArrival  = ws;
+    const candidateDispatch = Math.max(MIN_DISPATCH_H, candidateArrival - travelKmH);
+    return { dispatchH: candidateDispatch, noEntryConflict: true,
+             suggestion: hoursToTimeStr(candidateDispatch) };
+  }
+
+  return { dispatchH: idealDispatch, noEntryConflict: true };
+}
+
+// ─── MAIN ROUTE BUILDER ───────────────────────────────────────────────────────
 async function buildRoutes(rows) {
   setLoading(true, 'Parsing order sheet…');
   const removed=[], matched=[];
 
   rows.forEach(row => {
-    // Flexible column matching
     const deliveredTo = row['Delivered To'] || row['delivered to'] || row['Customer Name'] || row['customer name'] || row['Outlet Name'] || row['outlet name'] || row['DeliveredTo'] || String(Object.values(row)[0]||'');
     const weight = parseFloat(row['Weight'] || row['weight'] || row['Weight (kg)'] || row['weight (kg)'] || 0) || 0;
 
     if(!deliveredTo || deliveredTo === 'undefined') return;
 
-    // All coordinates, zone, ETA and vehicle come exclusively from master database
     const master = matchToMaster(String(deliveredTo));
 
     if(!master || !master.lat || !master.lng) {
@@ -1129,7 +1191,7 @@ async function buildRoutes(rows) {
     const lat = master.lat;
     const lng = master.lng;
     const zone = master.zone || 'UNKNOWN';
-    const eta = master.eta || '';
+    const eta  = master.eta  || '';
 
     matched.push({ deliveredTo: String(deliveredTo), weight, lat, lng, zone, eta });
   });
@@ -1145,7 +1207,7 @@ async function buildRoutes(rows) {
       removed.map(r=>`<div style="margin-top:3px">• ${r.name}${r.weight?' — '+r.weight+'kg':''}</div>`).join('');
   } else notice.style.display = 'none';
 
-  // Group by zone + eta bucket
+  // ── GROUP by zone × ETA-hour-bucket ─────────────────────────────────────────
   const byKey = {};
   matched.forEach(s => {
     const etaH = etaToHours(s.eta);
@@ -1161,34 +1223,63 @@ async function buildRoutes(rows) {
 
   setLoading(true, 'Building optimised routes…');
 
+  // ── CLUSTER-AND-PACK each zone+ETA group ─────────────────────────────────────
   for(const [key, group] of Object.entries(byKey)) {
-    // Sort stops by distance from warehouse
+    const maxUsable = VEHICLE_CAPS[VEHICLE_CAPS.length-1].usable;
+    const etaH = group.etaH;
+
+    // Split group into vehicle-sized buckets using a savings-style bin-pack:
+    // Sort by distance from warehouse (farthest first — deliver on the way out)
     const sorted = [...group.stops].sort((a,b) =>
-      haversine(WAREHOUSE.lat,WAREHOUSE.lng,a.lat,a.lng) - haversine(WAREHOUSE.lat,WAREHOUSE.lng,b.lat,b.lng)
+      haversine(WAREHOUSE.lat,WAREHOUSE.lng,b.lat,b.lng) - haversine(WAREHOUSE.lat,WAREHOUSE.lng,a.lat,a.lng)
     );
 
-    let bucket = [], bucketWeight = 0;
-    const maxUsable = VEHICLE_CAPS[VEHICLE_CAPS.length-1].usable;
+    let buckets = [[]];
+    let bucketWeights = [0];
 
-    const flushBucket = async () => {
-      if(!bucket.length) return;
-      const seq = await nearestNeighbour(bucket);
-      seq.forEach((s,i)=>s.seq=i+1);
-      const km = routeKm(seq);
-      const travelH = routeTravelHours(km, seq.length);
+    for(const s of sorted) {
+      // Try to fit into an existing bucket without breaching constraints
+      let placed = false;
+      for(let bi=0; bi<buckets.length; bi++) {
+        const testW  = bucketWeights[bi] + s.weight;
+        const testKm = routeKm([...buckets[bi], s]);
+        const testH  = routeTravelHours(testKm, buckets[bi].length + 1);
+        if(testW <= maxUsable && testKm <= MAX_ROUTE_KM && testH <= MAX_TRAVEL_H) {
+          buckets[bi].push(s);
+          bucketWeights[bi] += s.weight;
+          placed = true;
+          break;
+        }
+      }
+      if(!placed) {
+        buckets.push([s]);
+        bucketWeights.push(s.weight);
+      }
+    }
+
+    // Build a route for each bucket
+    for(const bucket of buckets) {
+      if(!bucket.length) continue;
+
+      // Optimise stop sequence with NN + 2-opt
+      const seq = optimiseStops(bucket);
+      seq.forEach((s,i) => s.seq = i+1);
+
+      const km          = routeKm(seq);
+      const travelH     = routeTravelHours(km, seq.length);
       const totalWeight = seq.reduce((s,x)=>s+x.weight, 0);
-      const vehicle = bestVehicle(totalWeight);
-      const dispatch = dispatchTime(group.eta, km, seq.length);
-      const dispatchH = etaToHours(dispatch) || MIN_DISPATCH_H;
-      const travelKmH = km / AVG_SPEED_KMH;
+      const vehicle     = bestVehicle(totalWeight);
 
-      // Collect constraint violations
+      // Resolve dispatch time with no-entry compliance
+      const dtResult = resolveDispatchTime(group.zone, etaH, km, seq.length);
+      const dispatchH = dtResult.dispatchH;
+      const dispatch  = hoursToTimeStr(dispatchH);
+
       const violations = [];
-      if(travelH > MAX_TRAVEL_H) violations.push(`⏱ Travel ${travelH.toFixed(1)}h > 12h limit`);
-      if(km > MAX_ROUTE_KM) violations.push(`📍 Distance ${km.toFixed(0)}km > 150km limit`);
-      const noEntry = checkNoEntry(group.zone, dispatchH, travelKmH);
-      if(noEntry?.conflict) {
-        const sug = noEntry.suggestion ? ` (suggest dispatch at ${noEntry.suggestion})` : '';
+      if(travelH > MAX_TRAVEL_H)  violations.push(`⏱ Travel ${travelH.toFixed(1)}h > 12h limit`);
+      if(km > MAX_ROUTE_KM)       violations.push(`📍 Distance ${km.toFixed(0)}km > 150km limit`);
+      if(dtResult.noEntryConflict) {
+        const sug = dtResult.suggestion ? ` (suggest dispatch at ${dtResult.suggestion})` : '';
         violations.push(`🚫 No-entry conflict for ${group.zone}${sug}`);
       }
       if(violations.length) constraintViolations.push({ routeNum, zone: group.zone, violations });
@@ -1205,23 +1296,11 @@ async function buildRoutes(rows) {
         dispatchH,
         travelTime: travelTimeStr(km),
         violations,
-        noEntry,
+        noEntry: dtResult.noEntryConflict ? { conflict: true, suggestion: dtResult.suggestion } : null,
+        rescheduled: dtResult.rescheduled || false,
       });
       routeNum++;
-      bucket = []; bucketWeight = 0;
-    };
-
-    for(const s of sorted) {
-      const testWeight = bucketWeight + s.weight;
-      const testKm = bucket.length ? routeKm([...bucket, s]) : 0;
-      const testH = routeTravelHours(testKm, bucket.length + 1);
-      if(testWeight > maxUsable || testKm > MAX_ROUTE_KM || testH > MAX_TRAVEL_H) {
-        await flushBucket();
-      }
-      bucket.push(s);
-      bucketWeight += s.weight;
     }
-    await flushBucket();
   }
 
   // Show constraint warnings
@@ -1235,13 +1314,15 @@ async function buildRoutes(rows) {
   } else cwEl.style.display = 'none';
 
   // No-entry summary
-  const noEntryRoutes = allRoutes.filter(r => r.noEntry?.conflict);
+  const noEntryRoutes   = allRoutes.filter(r => r.noEntry?.conflict);
+  const rescheduledRoutes = allRoutes.filter(r => r.rescheduled);
   const neb = document.getElementById('noEntryBanner');
-  if(noEntryRoutes.length) {
+  if(noEntryRoutes.length || rescheduledRoutes.length) {
     neb.classList.add('show');
-    document.getElementById('noEntryText').innerHTML =
-      `<strong>Delhi</strong>: Vehicles allowed 7–11am & 4–9pm &nbsp;|&nbsp; <strong>Gurgaon</strong>: Vehicles allowed 8–10am & 5–9pm<br>` +
-      noEntryRoutes.map(r=>`R${r.routeNum} (${r.zone}): ${r.noEntry.suggestion ? 'Suggested dispatch → <strong>'+r.noEntry.suggestion+'</strong>' : 'Review timing'}`).join(' &nbsp;&nbsp; ');
+    let html_ = `<strong>Delhi</strong>: Vehicles allowed 7–11am & 4–9pm &nbsp;|&nbsp; <strong>Gurgaon</strong>: Vehicles allowed 8–10am & 5–9pm<br>`;
+    if(rescheduledRoutes.length) html_ += `<span style="color:var(--accent)">✓ Auto-rescheduled to comply with no-entry: ` + rescheduledRoutes.map(r=>`R${r.routeNum} → dispatch <strong>${r.dispatch}</strong>`).join(', ') + `</span> `;
+    if(noEntryRoutes.length) html_ += `<span style="color:var(--danger)">⚠ Could not auto-resolve: ` + noEntryRoutes.map(r=>`R${r.routeNum} (${r.zone})${r.noEntry.suggestion ? ' — try dispatch at '+r.noEntry.suggestion : ''}`).join(', ') + `</span>`;
+    document.getElementById('noEntryText').innerHTML = html_;
   } else neb.classList.remove('show');
 
   // Init dispatch log for new routes
@@ -1315,6 +1396,7 @@ function renderRouteGrid() {
         </select>
       </div>
       <div class="rc-body">
+        ${r.rescheduled ? `<div style="font-size:11px;color:var(--accent);margin-top:4px;padding:4px 8px;background:var(--accent-light);border-radius:4px">✓ Dispatch auto-adjusted for no-entry compliance</div>` : ''}
         ${hasViolations ? `<div class="no-entry-warning">⚠ ${r.violations.join(' · ')}</div>` : ''}
         <div class="rc-metrics">
           <div class="rc-metric"><div class="m-val">${r.stops.length}</div><div class="m-lbl">Stops</div></div>
