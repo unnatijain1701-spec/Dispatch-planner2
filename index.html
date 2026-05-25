@@ -1145,23 +1145,25 @@ function resolveDispatchTime(zone, etaH, km, stopCount) {
 
   // Try each allowed window
   for(const [ws, we] of windows) {
-    // Option A: dispatch so vehicle arrives exactly at window open (ws)
-    let dispA   = ws - driveH;
-    let arrA    = ws;
-    // Option B: dispatch at MIN_DISPATCH_H (5am) → arrive later
-    let dispB   = MIN_DISPATCH_H;
-    let arrB    = MIN_DISPATCH_H + driveH;
+    // Option A: dispatch at 5am (MIN_DISPATCH_H), arrive at 5 + driveH
+    const dispA = MIN_DISPATCH_H;
+    const arrA  = MIN_DISPATCH_H + driveH;
 
-    // Prefer the later of the two dispatches (less idle time at warehouse)
+    // Option B: dispatch so vehicle arrives exactly at window open
+    const dispB = ws - driveH;
+    const arrB  = ws;
+
+    // Try Option A first (earlier delivery, more warehouse-friendly)
+    // Then Option B as fallback
     let dispatch, arrival;
-    if(dispA >= MIN_DISPATCH_H) {
-      dispatch = dispA; arrival = arrA;
+    if(arrA >= ws && arrA <= we) {
+      dispatch = dispA; arrival = arrA;   // 5am dispatch lands inside window
+    } else if(dispB >= MIN_DISPATCH_H) {
+      dispatch = dispB; arrival = arrB;   // arrive exactly at window open
     } else {
-      dispatch = dispB; arrival = arrB;
+      continue; // neither option works for this window
     }
 
-    // Arrival must be inside the allowed window
-    if(arrival < ws || arrival > we) continue;
     // Arrival must be at or before the ETA deadline
     if(etaH !== null && arrival > etaH) continue;
 
@@ -1186,8 +1188,11 @@ function resolveDispatchTime(zone, etaH, km, stopCount) {
 }
 
 // Compute the effective km cap for a no-entry zone + ETA deadline combo.
-// Vehicle must ARRIVE (dispatch + driveH) within an allowed window AND before etaH.
-// Returns the max km that allows a valid dispatch from MIN_DISPATCH_H.
+// Dispatching at MIN_DISPATCH_H (5am), arrival = 5 + driveH.
+// For a window [ws, we]: arrival must satisfy ws <= arrival <= we AND arrival <= etaH.
+// → driveH must be in [ws - MIN_DISPATCH_H, min(we, etaH) - MIN_DISPATCH_H]
+// A window is only usable if that range is valid (min <= max).
+// We pick the largest max-km across all usable windows.
 function noEntryKmCap(zone, etaH) {
   const windows = DELHI_ZONES.includes(zone)  ? NO_ENTRY.DELHI
                 : GURGAON_ZONES.includes(zone) ? NO_ENTRY.GURGAON
@@ -1196,17 +1201,14 @@ function noEntryKmCap(zone, etaH) {
 
   let bestMaxKm = 0;
   for(const [ws, we] of windows) {
-    // If dispatching at MIN_DISPATCH_H, arrive at MIN_DISPATCH_H + driveH.
-    // Need arrival in [ws, we] AND <= etaH.
-    // So: driveH <= we - MIN_DISPATCH_H  AND  MIN_DISPATCH_H + driveH <= etaH (if set)
-    const maxDriveFromMorning = we - MIN_DISPATCH_H;
-    const maxDriveByEta       = etaH !== null ? etaH - MIN_DISPATCH_H : Infinity;
-    // Also: arrival >= ws means MIN_DISPATCH_H + driveH >= ws → driveH >= ws - MIN_DISPATCH_H
-    // (minimum drive, not a cap — so we only cap at the upper bound)
-    const cap = Math.min(maxDriveFromMorning, maxDriveByEta) * AVG_SPEED_KMH;
+    const minDrive = ws - MIN_DISPATCH_H;                          // must arrive AFTER window starts
+    const maxDrive = Math.min(we, etaH !== null ? etaH : we) - MIN_DISPATCH_H; // must arrive BEFORE window ends AND before ETA
+    if(maxDrive < minDrive) continue;                              // this window is not usable for this ETA
+    const cap = maxDrive * AVG_SPEED_KMH;
     if(cap > bestMaxKm) bestMaxKm = cap;
   }
-  return Math.min(bestMaxKm, MAX_ROUTE_KM);
+  // If no window is usable (e.g. ETA before any window opens), fall back to global cap
+  return bestMaxKm > 0 ? Math.min(bestMaxKm, MAX_ROUTE_KM) : MAX_ROUTE_KM;
 }
 
 // ─── MAIN ROUTE BUILDER ───────────────────────────────────────────────────────
@@ -1917,7 +1919,27 @@ function loadSavedRoutes() {
 function dismissSavedBanner() { document.getElementById('savedBanner').classList.remove('show'); }
 function setLoading(show, msg='Processing…') { document.getElementById('loadingText').textContent=msg; document.getElementById('loadingOverlay').classList.toggle('show',show); }
 
+
 // ─── FILE INPUT ───────────────────────────────────────────────────────────────
+function processFile(file) {
+  const reader = new FileReader();
+  if(file.name.endsWith('.csv')) {
+    reader.onload = e => {
+      const wb = XLSX.read(e.target.result, {type:'string'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      buildRoutes(XLSX.utils.sheet_to_json(ws, {defval:''}));
+    };
+    reader.readAsText(file);
+  } else {
+    reader.onload = e => {
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      buildRoutes(XLSX.utils.sheet_to_json(ws, {defval:''}));
+    };
+    reader.readAsBinaryString(file);
+  }
+}
+
 const uploadZone=document.getElementById('uploadZone');
 const fileInput=document.getElementById('fileInput');
 uploadZone.addEventListener('click',()=>fileInput.click());
